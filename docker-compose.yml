@@ -1,0 +1,82 @@
+version: '3.7'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server --console-address ":9001" /data/
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - ./minio-storage:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - gallery-network
+
+  mongo:
+    image: 'mongo'
+    container_name: 'mongodb'
+    environment:
+      - MONGO_INITDB_DATABASE=gallery
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    volumes:
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init.mongo.js:ro
+      - ./mongo-data:/data/db
+    ports:
+      - 27017-27019:27017-27019
+    networks:
+      - gallery-network
+
+  backend:
+    image: gallery-server
+    container_name: gallery-backend
+    build: 
+      context: ./backend
+      dockerfile: ./Dockerfile
+    entrypoint: ["yarn", "start:dev"]
+    ports: 
+      - 3001:3001
+      - 3002:9229
+    networks:
+      - gallery-network
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+
+  frontend:
+    image: gallery-client
+    container_name: gallery-frontend
+    build: 
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    entrypoint: ["yarn", "start"]
+    ports: 
+      - 3000:3000
+    networks:
+      - gallery-network
+    depends_on:
+      - mongo
+      - backend
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+
+volumes:
+  minio-storage:
+
+networks:
+  gallery-network:
+    driver: bridge
