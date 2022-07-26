@@ -7,23 +7,39 @@ interface GalleryState {
 
 const initialState = { count: 0 } as GalleryState;
 
-export const uploadImage = createAsyncThunk('user/uploadFile', async (file, thunkAPI) => {
-  const response = await fetch('http://localhost:3001/api/gallery', {
-    method: 'POST',
-    body: file,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  });
-  return response;
-});
+export const uploadImage = createAsyncThunk<undefined, File, { rejectValue: string }>(
+  'user/uploadFile',
+  async (file, thunkApi) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileName', file.name);
 
-const counterSlice = createSlice({
+    const response = await fetch('http://localhost:3001/api/user/upload', {
+      method: 'POST',
+      body: formData
+    });
+    return response.json();
+  }
+);
+
+const gallerySlice = createSlice({
   name: 'gallery',
   initialState,
   reducers: {},
-  extraReducers: {}
+  extraReducers: (builder) => {
+    builder.addCase(uploadImage.pending, (state) => {
+      console.log('pending');
+    });
+
+    builder.addCase(uploadImage.fulfilled, (state, { payload }) => {
+      console.log('fulfilled');
+    });
+
+    builder.addCase(uploadImage.rejected, (state, { payload }) => {
+      console.log('rejected');
+    });
+  }
 });
 
 // export const {} = counterSlice.actions;
-export default counterSlice.reducer;
+export default gallerySlice.reducer;

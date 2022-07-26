@@ -8,9 +8,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserService } from './user.service';
 
 @Controller('user')
 export class UserController {
+  constructor(private readonly service: UserService) {}
+
   @Get()
   getUser(@Res() res) {
     console.log('getUser!!!');
@@ -21,8 +24,15 @@ export class UserController {
   }
 
   @Post('/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  uploadFile(@UploadedFile() file) {
-    console.log(file);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fieldSize: 100,
+      },
+    }),
+  )
+  async uploadFile(@UploadedFile() file) {
+    const result = await this.service.uploadFile(file);
+    return result;
   }
 }

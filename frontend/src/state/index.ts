@@ -1,7 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
+import galleryReducer from './gallerySlice';
 
 const store = configureStore({
-  reducer: {}
+  reducer: {
+    gallery: galleryReducer
+  }
 });
 
 // Infer the `RootState` and `AppDispatch` types from the store itself

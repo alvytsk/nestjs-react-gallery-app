@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 COPY --chown=node:node package*.json ./
 RUN yarn
 COPY --chown=node:node . .
+# RUN apk add ffmpeg && rm -rf /var/cache/*
 USER node
 
 # FROM node:12.19.0-alpine3.9 as production
