@@ -1,13 +1,20 @@
 import { Injectable, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { S3 } from 'aws-sdk';
 import * as crypto from 'crypto';
 import sharp from 'sharp';
 import { BufferedFile } from './file.model';
+import { UploadedFile, UploadedFileDocument } from '../schemas/file.schema';
 
 @Injectable()
 export class UserService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    @InjectModel(UploadedFile.name)
+    private uploadedFileModel: Model<UploadedFileDocument>,
+  ) {}
 
   private generateHashedFilename(originalFilename: string): {
     filename: string;
@@ -77,6 +84,7 @@ export class UserService {
 
     // console.log({ filename });
 
+    //Upload thumbnail
     const uploadThumbnailPromise = s3
       .upload({
         Bucket: 'test',
@@ -102,7 +110,31 @@ export class UserService {
     promises.push(uploadFilePromise);
 
     return Promise.all(promises).then((values) => {
-      return values[0];
+      //push all info to db
+      const imageData = {
+        id: filename.filename,
+        original: {
+          name: file.originalname,
+          mimeType: file.mimetype,
+        },
+        thumbnail: {
+          path: values[0].Location,
+          key: values[0].Key,
+          bucket: values[0].Bucket,
+        },
+        image: {
+          bucket: values[1].Bucket,
+          key: values[1].Key,
+          path: values[1].Location,
+        },
+      };
+
+      const record = new this.uploadedFileModel({
+        ...imageData,
+      });
+      record.save();
+
+      return imageData;
     });
   }
 }

@@ -17,7 +17,6 @@ export class UserController {
 
   @Get()
   getUser(@Res() res) {
-    console.log('getUser!!!');
     return res.status(HttpStatus.OK).json({
       status: 200,
       data: 'Got!!!',
