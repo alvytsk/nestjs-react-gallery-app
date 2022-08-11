@@ -37,6 +37,7 @@ services:
       - gallery-network
 
   backend:
+    platform: linux/amd64
     image: gallery-server
     container_name: gallery-backend
     build: 
@@ -49,6 +50,7 @@ services:
     networks:
       - gallery-network
     depends_on:
+      - minio
       - mongo
     volumes:
       - ./backend:/usr/src/app

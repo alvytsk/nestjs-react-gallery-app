@@ -2,12 +2,17 @@ import { Injectable, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3 } from 'aws-sdk';
 import * as crypto from 'crypto';
+import sharp from 'sharp';
+import { BufferedFile } from './file.model';
 
 @Injectable()
 export class UserService {
   constructor(private configService: ConfigService) {}
 
-  private generateHashedFilename(originalFilename: string): string {
+  private generateHashedFilename(originalFilename: string): {
+    filename: string;
+    extension: string;
+  } {
     const timestamp = Date.now().toString();
     const hashedFileName = crypto
       .createHash('md5')
@@ -18,7 +23,7 @@ export class UserService {
       originalFilename.length,
     );
 
-    return hashedFileName + extension;
+    return { filename: hashedFileName, extension: extension };
   }
 
   private checkFileType(file): boolean {
@@ -29,7 +34,27 @@ export class UserService {
     return true;
   }
 
-  async uploadFile(@Req() file) {
+  private generateThumbnail = async (
+    input,
+    maxDimension = { width: 640, height: 480 },
+    square = false,
+  ) => {
+    const transform = sharp()
+      .resize({
+        width: maxDimension.width,
+        height: square ? maxDimension.width : maxDimension.height,
+        fit: square ? 'cover' : 'inside',
+      })
+      .sharpen()
+      .webp({ quality: 80 })
+      .on('info', (info) => {
+        console.log({ info });
+      });
+
+    return input.pipe(transform);
+  };
+
+  async uploadFile(file: BufferedFile) {
     if (!this.checkFileType(file)) {
       throw new HttpException(
         'File type not supported',
@@ -46,17 +71,30 @@ export class UserService {
     });
 
     const promises = [];
+    const filename = this.generateHashedFilename(file.originalname);
 
-    //if it's an image - generate thumbnail
-    {
-      //...
-    }
+    const imageType = file.mimetype.match(/^image\/(.*)/)[1];
+
+    // console.log({ filename });
+
+    const uploadThumbnailPromise = s3
+      .upload({
+        Bucket: 'test',
+        Key: `${filename.filename}_thumbnail.webp`,
+        Body: await sharp(file.buffer)
+          .resize(200, 200)
+          .sharpen()
+          .webp({ quality: 80 })
+          .toBuffer(),
+      })
+      .promise();
+    promises.push(uploadThumbnailPromise);
 
     //Upload source file
     const uploadFilePromise = s3
       .upload({
         Bucket: this.configService.get('MINIO_BUCKET_NAME'),
-        Key: this.generateHashedFilename(file.originalname),
+        Key: `${filename.filename}${filename.extension}`,
         Body: file.buffer,
       })
       .promise();

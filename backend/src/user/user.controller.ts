@@ -8,6 +8,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { BufferedFile } from './file.model';
 import { UserService } from './user.service';
 
 @Controller('user')
@@ -31,7 +32,7 @@ export class UserController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file) {
+  async uploadFile(@UploadedFile() file: BufferedFile) {
     const result = await this.service.uploadFile(file);
     return result;
   }
