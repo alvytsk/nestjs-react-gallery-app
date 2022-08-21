@@ -4,7 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { envSchema } from './constants/env.schema';
-import { UserModule } from './user/user.module';
+import { UserModule } from './gallery/gallery.module';
+import { CloudService } from './cloud/cloud.service';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { UserModule } from './user/user.module';
     UserModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CloudService],
 })
 export class AppModule {}

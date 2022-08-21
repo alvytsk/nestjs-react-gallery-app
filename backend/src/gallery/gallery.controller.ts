@@ -8,12 +8,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { BufferedFile } from './file.model';
-import { UserService } from './user.service';
+import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
+import { GalleryService } from './gallery.service';
 
 @Controller('user')
-export class UserController {
-  constructor(private readonly service: UserService) {}
+export class GalleryController {
+  constructor(private readonly service: GalleryService) {}
 
   @Get()
   getUser(@Res() res) {
@@ -31,7 +31,7 @@ export class UserController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file: BufferedFile) {
+  async uploadFile(@UploadedFile() file: UploadedDto) {
     const result = await this.service.uploadFile(file);
     return result;
   }
