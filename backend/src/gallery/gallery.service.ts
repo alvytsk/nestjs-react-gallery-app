@@ -71,16 +71,16 @@ export class GalleryService {
     }
 
     const promises = [];
-    // const filename = this.generateHashedFilename(file.originalname);
+    const hashedFilename = this.generateHashedFilename(file.originalname);
 
-    // const imageType = file.mimetype.match(/^image\/(.*)/)[1];
+    const imageType = file.mimetype.match(/^image\/(.*)/)[1];
     // console.log(imageType);
 
     console.log(file);
 
     const thumbFile: UploadedDto = {
       ...file,
-      originalname: 'thumbnail-' + file.originalname,
+      hashedname: hashedFilename.filename + '-thumbnail.webp',
       buffer: null,
     };
 
@@ -96,63 +96,41 @@ export class GalleryService {
     }
 
     promises.push(this.cloudService.uploadFile(thumbFile));
-    promises.push(this.cloudService.uploadFile(file));
-
-    // console.log({ filename });
-
-    //Upload thumbnail
-    // const uploadThumbnailPromise = s3
-    //   .upload({
-    //     Bucket: 'test',
-    //     Key: `${filename.filename}_thumbnail.webp`,
-    //     Body: await sharp(file.buffer)
-    //       .resize(200, 200)
-    //       .sharpen()
-    //       .webp({ quality: 80 })
-    //       .toBuffer(),
-    //   })
-    //   .promise();
-    // promises.push(uploadThumbnailPromise);
-
-    //Upload source file
-    // const uploadFilePromise = s3
-    //   .upload({
-    //     Bucket: this.configService.get('MINIO_BUCKET_NAME'),
-    //     Key: `${filename.filename}${filename.extension}`,
-    //     Body: file.buffer,
-    //   })
-    //   .promise();
-
-    // promises.push(uploadFilePromise);
+    promises.push(
+      this.cloudService.uploadFile({
+        ...file,
+        hashedname: hashedFilename.filename + hashedFilename.extension,
+      }),
+    );
 
     return Promise.all(promises).then((values) => {
       console.log(values);
 
-      //push all info to db
-      // const imageData = {
-      //   id: filename.filename,
-      //   original: {
-      //     name: file.originalname,
-      //     mimeType: file.mimetype,
-      //   },
-      //   thumbnail: {
-      //     path: values[0].Location,
-      //     key: values[0].Key,
-      //     bucket: values[0].Bucket,
-      //   },
-      //   image: {
-      //     bucket: values[1].Bucket,
-      //     key: values[1].Key,
-      //     path: values[1].Location,
-      //   },
-      // };
+      // push all info to db
+      const imageData = {
+        id: hashedFilename.filename,
+        original: {
+          name: file.originalname,
+          mimeType: file.mimetype,
+        },
+        thumbnail: {
+          path: values[0].Location,
+          key: values[0].Key,
+          bucket: values[0].Bucket,
+        },
+        image: {
+          bucket: values[1].Bucket,
+          key: values[1].Key,
+          path: values[1].Location,
+        },
+      };
 
-      // const record = new this.uploadedFileModel({
-      //   ...imageData,
-      // });
-      // record.save();
+      const record = new this.uploadedFileModel({
+        ...imageData,
+      });
+      record.save();
 
-      return;
+      return imageData;
     });
   }
 }

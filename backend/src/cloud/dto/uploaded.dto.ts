@@ -8,6 +8,9 @@ export class UploadedDto {
   originalname: string;
 
   @IsString()
+  hashedname: string;
+
+  @IsString()
   encoding: string;
 
   @IsMimeType()

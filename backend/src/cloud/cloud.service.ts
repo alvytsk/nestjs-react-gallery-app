@@ -7,7 +7,7 @@ import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 export class CloudService {
   constructor(private readonly configService: ConfigService) {}
 
-  async uploadFile(file: UploadedDto) {
+  uploadFile(file: UploadedDto) {
     const s3 = new S3({
       accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
       secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
@@ -16,11 +16,11 @@ export class CloudService {
       signatureVersion: 'v4',
     });
 
-    await s3
+    return s3
       .upload({
         Bucket: 'test',
         Body: file.buffer,
-        Key: file.fieldname + '_' + file.originalname,
+        Key: file.hashedname,
         ContentType: file.mimetype,
       })
       .promise();
