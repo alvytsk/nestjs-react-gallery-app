@@ -40,10 +40,12 @@ services:
     platform: linux/amd64
     image: gallery-server
     container_name: gallery-backend
-    build: 
+    build:
+      target: production # development or production
       context: ./backend
       dockerfile: ./Dockerfile
-    entrypoint: ["yarn", "start:dev"]
+    env_file:
+      - ./backend/.env
     ports: 
       - 3001:3001
       - 3002:9229
