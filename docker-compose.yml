@@ -41,7 +41,7 @@ services:
     image: gallery-server
     container_name: gallery-backend
     build:
-      target: production # development or production
+      target: development # development or production
       context: ./backend
       dockerfile: ./Dockerfile
     env_file:

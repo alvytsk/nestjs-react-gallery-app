@@ -1,2 +1,0 @@
-web: npm run start:prod
-dev: npm run start:dev
