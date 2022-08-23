@@ -3,6 +3,6 @@ setup:
 build:
   docker:
     release:
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
       target: production
-    web: Dockerfile
+    web: backend/Dockerfile
