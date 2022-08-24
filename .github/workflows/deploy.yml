@@ -14,7 +14,7 @@ jobs:
       - name: Build and push Docker to Heroku
         env:
           HEROKU_APP_NAME: nestjs-gallery
-          DOCKERFILE_DIRECTORY: "/backend"
+          DOCKERFILE_DIRECTORY: "backend"
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
           DOCKERFILE_NAME: "Dockerfile"
