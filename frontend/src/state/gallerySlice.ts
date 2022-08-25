@@ -14,6 +14,7 @@ export const uploadImage = createAsyncThunk<undefined, File, { rejectValue: stri
     formData.append('file', file);
     formData.append('fileName', file.name);
 
+    // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
     const response = await fetch('http://localhost:3001/api/user/upload', {
       method: 'POST',
       body: formData
