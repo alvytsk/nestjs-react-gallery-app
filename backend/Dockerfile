@@ -23,7 +23,7 @@ RUN	su node \
 
 USER node
 
-CMD ["npm", "run", "start:dev"]
+# CMD ["npm", "run", "start:dev"]
 
 ###################
 # BUILD FOR PRODUCTION
