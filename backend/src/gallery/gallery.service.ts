@@ -95,42 +95,42 @@ export class GalleryService {
       console.log(err);
     }
 
-    promises.push(this.cloudService.uploadFile(thumbFile));
-    promises.push(
-      this.cloudService.uploadFile({
-        ...file,
-        hashedname: hashedFilename.filename + hashedFilename.extension,
-      }),
-    );
+    // promises.push(this.cloudService.uploadFile(thumbFile));
+    // promises.push(
+    //   this.cloudService.uploadFile({
+    //     ...file,
+    //     hashedname: hashedFilename.filename + hashedFilename.extension,
+    //   }),
+    // );
 
-    return Promise.all(promises).then((values) => {
-      console.log(values);
+    // return Promise.all(promises).then((values) => {
+    // console.log(values);
 
-      // push all info to db
-      const imageData = {
-        id: hashedFilename.filename,
-        original: {
-          name: file.originalname,
-          mimeType: file.mimetype,
-        },
-        thumbnail: {
-          path: values[0].Location,
-          key: values[0].Key,
-          bucket: values[0].Bucket,
-        },
-        image: {
-          bucket: values[1].Bucket,
-          key: values[1].Key,
-          path: values[1].Location,
-        },
-      };
+    // push all info to db
+    const imageData = {
+      id: hashedFilename.filename,
+      original: {
+        name: file.originalname,
+        mimeType: file.mimetype,
+      },
+      thumbnail: {
+        path: '',
+        key: '',
+        bucket: '',
+      },
+      image: {
+        bucket: '',
+        key: '',
+        path: '',
+      },
+    };
 
-      const record = new this.uploadedFileModel({
-        ...imageData,
-      });
-      record.save();
-
-      return imageData;
+    const record = new this.uploadedFileModel({
+      ...imageData,
     });
+    record.save();
+
+    return imageData;
+    // });
   }
 }

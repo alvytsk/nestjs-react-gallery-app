@@ -44,6 +44,7 @@ services:
       target: development # development or production
       context: ./backend
       dockerfile: ./Dockerfile
+    entrypoint: ["yarn", "start:dev"]
     env_file:
       - ./backend/.env
     ports: 
