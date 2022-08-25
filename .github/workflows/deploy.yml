@@ -2,11 +2,11 @@ name: Build backend Docker container and deploy to Heroku
 on:
   push:
     branches:
-      - heroku-deployment
+      - deploy
 
 jobs:
   app1:
-    name: Build and deploy Gallery app
+    name: Build and deploy gallery app
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
