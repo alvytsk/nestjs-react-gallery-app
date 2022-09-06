@@ -66,4 +66,4 @@ RUN	su node \
   && chown node:node /usr/local/lib/node_modules -R
 
 # Start the server using the production build
-CMD ["node", "dist/main.ts"]
+CMD ["node", "dist/main"]
