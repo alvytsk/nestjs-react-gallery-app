@@ -6,3 +6,5 @@ build:
       dockerfile: backend/Dockerfile
       target: production
     web: backend/Dockerfile
+run:
+  web: node dist/main.ts
