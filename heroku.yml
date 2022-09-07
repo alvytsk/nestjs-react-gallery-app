@@ -1,5 +1,3 @@
-setup:
-  config: MONGODB_URI='mongodb://gallery:gallery@mongo:27017/gallery'
 build:
   docker:
     release:
