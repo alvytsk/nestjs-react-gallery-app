@@ -12,13 +12,13 @@ const UploadForm = () => {
   };
 
   const onFileChange = (event) => {
-    setFile(event.target.files[0]);
+    setFile(event.target.files);
   };
 
   return (
     <div>
       <form onSubmit={onUpload}>
-        <input type="file" onChange={onFileChange} />
+        <input multiple type="file" onChange={onFileChange} />
         <button type="submit">Upload</button>
       </form>
     </div>
