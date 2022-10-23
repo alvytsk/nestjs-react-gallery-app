@@ -6,8 +6,9 @@ import {
   UploadedFile,
   UseInterceptors,
   HttpStatus,
+  UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 import { GalleryService } from './gallery.service';
 
@@ -24,15 +25,9 @@ export class GalleryController {
   }
 
   @Post('/upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fieldSize: 100,
-      },
-    }),
-  )
-  async uploadFile(@UploadedFile() file: UploadedDto) {
-    const result = await this.service.uploadFile(file);
+  @UseInterceptors(AnyFilesInterceptor())
+  async uploadFile(@UploadedFiles() files: Array<UploadedDto>) {
+    const result = await this.service.uploadFile(files);
     return result;
   }
 }
