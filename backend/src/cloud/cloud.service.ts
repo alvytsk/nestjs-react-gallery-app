@@ -25,4 +25,15 @@ export class CloudService {
       })
       .promise();
   }
+
+  async generatePresignedUrl(key: string, expireTimeInSec = 15 * 60) {
+    const s3 = new S3();
+    const params = {
+      Bucket: 'test',
+      Key: key,
+      Expires: expireTimeInSec,
+    };
+
+    return s3.getSignedUrlPromise('getObject', params);
+  }
 }

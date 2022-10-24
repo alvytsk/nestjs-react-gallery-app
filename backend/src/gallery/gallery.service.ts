@@ -1,4 +1,11 @@
-import { Injectable, Req, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Req,
+  HttpException,
+  HttpStatus,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -42,41 +49,65 @@ export class GalleryService {
     return true;
   }
 
-  private generateThumbnail = async (
-    input,
-    maxDimension = { width: 640, height: 480 },
-    square = false,
-  ) => {
-    const transform = sharp()
-      .resize({
-        width: maxDimension.width,
-        height: square ? maxDimension.width : maxDimension.height,
-        fit: square ? 'cover' : 'inside',
-      })
-      .sharpen()
-      .webp({ quality: 80 })
-      .on('info', (info) => {
-        console.log({ info });
-      });
+  // private generateThumbnail = async (
+  //   input,
+  //   maxDimension = { width: 640, height: 480 },
+  //   square = false,
+  // ) => {
+  //   const transform = sharp()
+  //     .resize({
+  //       width: maxDimension.width,
+  //       height: square ? maxDimension.width : maxDimension.height,
+  //       fit: square ? 'cover' : 'inside',
+  //     })
+  //     .sharpen()
+  //     .webp({ quality: 80 })
+  //     .on('info', (info) => {
+  //       console.log({ info });
+  //     });
 
-    return input.pipe(transform);
-  };
+  //   return input.pipe(transform);
+  // };
 
-  async uploadFile(file: UploadedDto) {
-    if (!this.checkFileType(file)) {
-      throw new HttpException(
-        'File type not supported',
-        HttpStatus.BAD_REQUEST,
-      );
+  async generateThumbnail(thumbFile: UploadedDto, file: UploadedDto) {
+    try {
+      thumbFile.buffer = await sharp(file.buffer)
+        .resize(200, 200)
+        .sharpen()
+        .webp({ quality: 80 })
+        .toBuffer();
+      return thumbFile;
+    } catch (err) {
+      throw new ConflictException(err.keyValue);
     }
+  }
 
-    const promises = [];
+  checkFiles(files: Array<UploadedDto>) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException({ message: 'no files provided' });
+    }
+    files.forEach((file) => {
+      if (!this.checkFileType(file)) {
+        throw new HttpException(
+          'File type not supported',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    });
+  }
+
+  async uploadFile(files: Array<UploadedDto>) {
+    this.checkFiles(files);
+
+    const thumbnailFiles = files.map((file) => this.processThumbnails(file));
+
+    return thumbnailFiles;
+  }
+
+  async processThumbnails(file: UploadedDto) {
     const hashedFilename = this.generateHashedFilename(file.originalname);
-
     const imageType = file.mimetype.match(/^image\/(.*)/)[1];
-    // console.log(imageType);
-
-    console.log(file);
+    const promises = [];
 
     const thumbFile: UploadedDto = {
       ...file,
@@ -84,27 +115,11 @@ export class GalleryService {
       buffer: null,
     };
 
-    //generate thumbnail
-    try {
-      thumbFile.buffer = await sharp(file.buffer)
-        .resize(200, 200)
-        .sharpen()
-        .webp({ quality: 80 })
-        .toBuffer();
-    } catch (err) {
-      console.log(err);
-    }
-
-    // promises.push(this.cloudService.uploadFile(thumbFile));
-    // promises.push(
-    //   this.cloudService.uploadFile({
-    //     ...file,
-    //     hashedname: hashedFilename.filename + hashedFilename.extension,
-    //   }),
-    // );
-
-    // return Promise.all(promises).then((values) => {
-    // console.log(values);
+    promises.push(
+      this.cloudService.uploadFile(
+        await this.generateThumbnail(thumbFile, file),
+      ),
+    );
 
     // push all info to db
     const imageData = {
@@ -124,13 +139,26 @@ export class GalleryService {
         path: '',
       },
     };
-
-    const record = new this.uploadedFileModel({
-      ...imageData,
-    });
-    record.save();
+    this.saveFile(imageData);
+    imageData.image.path = await this.cloudService.generatePresignedUrl(
+      file.fieldname + '_' + file.originalname,
+    );
 
     return imageData;
-    // });
+    // promises.push(
+    //   this.cloudService.uploadFile({
+    //     ...file,
+    //     hashedname: hashedFilename.filename + hashedFilename.extension,
+    //   }),
+    // );
+  }
+
+  async saveFile(awsFile: any) {
+    try {
+      const newFile = new this.uploadedFileModel(awsFile);
+      await newFile.save();
+    } catch (error) {
+      throw new ConflictException(error.keyValue);
+    }
   }
 }
