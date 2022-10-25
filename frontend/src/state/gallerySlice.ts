@@ -7,12 +7,13 @@ interface GalleryState {
 
 const initialState = { count: 0 } as GalleryState;
 
-export const uploadImage = createAsyncThunk<undefined, File, { rejectValue: string }>(
+export const uploadImage = createAsyncThunk<undefined, File[], { rejectValue: string }>(
   'user/uploadFile',
-  async (file, thunkApi) => {
+  async (files, thunkApi) => {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('fileName', file.name);
+    for (let i = 0; i < files.length; i++) {
+      formData.append(`${i}-${files[i].lastModified}`, files[i]);
+    }
 
     // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
     const response = await fetch('http://localhost:3001/api/user/upload', {
