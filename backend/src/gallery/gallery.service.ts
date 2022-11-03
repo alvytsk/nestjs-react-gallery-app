@@ -5,6 +5,8 @@ import {
   HttpStatus,
   BadRequestException,
   ConflictException,
+  RequestTimeoutException,
+  BadGatewayException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -99,9 +101,15 @@ export class GalleryService {
   async uploadFile(files: Array<UploadedDto>) {
     this.checkFiles(files);
 
-    const thumbnailFiles = files.map((file) => this.processThumbnails(file));
-
-    return thumbnailFiles;
+    try {
+      const result = await Promise.all(
+        files.map(async (file) => await this.processThumbnails(file)),
+      );
+      return result;
+    } catch (err) {
+      console.log(err);
+      throw new BadGatewayException(err);
+    }
   }
 
   async processThumbnails(file: UploadedDto) {
@@ -120,10 +128,31 @@ export class GalleryService {
         await this.generateThumbnail(thumbFile, file),
       ),
     );
+    promises.push(
+      this.cloudService.uploadFile({
+        ...file,
+        hashedname: file.originalname,
+      }),
+    );
 
-    // push all info to db
+    const result = await Promise.all(promises).then(async () => {
+      const fileObject = {
+        name: file.originalname,
+        url: await this.cloudService.generatePresignedUrl(thumbFile.hashedname),
+        type: file.mimetype,
+        id: file.fieldname,
+      };
+      return fileObject;
+    });
+
+    await this.pushImageFileToDB(hashedFilename.filename, file);
+
+    return result;
+  }
+
+  async pushImageFileToDB(id: string, file: UploadedDto) {
     const imageData = {
-      id: hashedFilename.filename,
+      id,
       original: {
         name: file.originalname,
         mimeType: file.mimetype,
@@ -139,18 +168,7 @@ export class GalleryService {
         path: '',
       },
     };
-    this.saveFile(imageData);
-    imageData.image.path = await this.cloudService.generatePresignedUrl(
-      file.fieldname + '_' + file.originalname,
-    );
-
-    return imageData;
-    // promises.push(
-    //   this.cloudService.uploadFile({
-    //     ...file,
-    //     hashedname: hashedFilename.filename + hashedFilename.extension,
-    //   }),
-    // );
+    await this.saveFile(imageData);
   }
 
   async saveFile(awsFile: any) {
