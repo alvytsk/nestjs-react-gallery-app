@@ -1,11 +1,17 @@
 import React from 'react';
 import ItemMenu from './ItemMenu';
+import { useAppSelector } from '~/hooks/state';
 
 const GalleryItem = () => {
+  const files = useAppSelector((state) => state.gallery.files);
+  if (!files?.length) {
+    return null;
+  }
   return (
     <div>
-      <img src="" alt="image" />
-      <ItemMenu />
+      {files?.map((file) => (
+        <ItemMenu key={file.id} file={file} />
+      ))}
     </div>
   );
 };

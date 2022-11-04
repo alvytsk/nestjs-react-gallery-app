@@ -3,12 +3,11 @@ import {
   Get,
   Post,
   Res,
-  UploadedFile,
   UseInterceptors,
   HttpStatus,
   UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 import { GalleryService } from './gallery.service';
 
