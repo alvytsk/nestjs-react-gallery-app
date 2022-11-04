@@ -30,15 +30,19 @@ export class GalleryService {
     filename: string;
     extension: string;
   } {
-    const timestamp = Date.now().toString();
+    console.log(originalFilename);
+
+    // const timestamp = Date.now().toString();
     const hashedFileName = crypto
       .createHash('md5')
-      .update(timestamp)
+      .update(originalFilename)
       .digest('hex');
     const extension = originalFilename.substring(
       originalFilename.lastIndexOf('.'),
       originalFilename.length,
     );
+
+    console.log(hashedFileName);
 
     return { filename: hashedFileName, extension: extension };
   }
@@ -105,6 +109,8 @@ export class GalleryService {
       const result = await Promise.all(
         files.map(async (file) => await this.processThumbnails(file)),
       );
+
+      // console.log(result);
       return result;
     } catch (err) {
       console.log(err);
@@ -142,6 +148,9 @@ export class GalleryService {
         type: file.mimetype,
         id: file.fieldname,
       };
+
+      // console.log(fileObject);
+
       return fileObject;
     });
 

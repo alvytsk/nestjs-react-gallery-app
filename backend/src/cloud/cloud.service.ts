@@ -5,18 +5,28 @@ import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 
 @Injectable()
 export class CloudService {
-  constructor(private readonly configService: ConfigService) {}
+  private s3: S3;
 
-  uploadFile(file: UploadedDto) {
-    const s3 = new S3({
+  constructor(private readonly configService: ConfigService) {
+    this.s3 = new S3({
       accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
       secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
       endpoint: this.configService.get('MINIO_URI'),
       s3ForcePathStyle: true, // needed with minio
       signatureVersion: 'v4',
     });
+  }
 
-    return s3
+  uploadFile(file: UploadedDto) {
+    // const s3 = new S3({
+    //   accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
+    //   secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
+    //   endpoint: this.configService.get('MINIO_URI'),
+    //   s3ForcePathStyle: true, // needed with minio
+    //   signatureVersion: 'v4',
+    // });
+
+    return this.s3
       .upload({
         Bucket: 'test',
         Body: file.buffer,
@@ -26,14 +36,22 @@ export class CloudService {
       .promise();
   }
 
-  async generatePresignedUrl(key: string, expireTimeInSec = 15 * 60) {
-    const s3 = new S3();
+  generatePresignedUrl(key: string, expireTimeInSec = 15 * 60) {
+    // const s3 = new S3({
+    //   accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
+    //   secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
+    //   endpoint: this.configService.get('MINIO_URI'),
+    //   s3ForcePathStyle: true, // needed with minio
+    //   signatureVersion: 'v4',
+    // });
+    console.log(key);
+
     const params = {
       Bucket: 'test',
       Key: key,
       Expires: expireTimeInSec,
     };
 
-    return s3.getSignedUrlPromise('getObject', params);
+    return this.s3.getSignedUrlPromise('getObject', params);
   }
 }

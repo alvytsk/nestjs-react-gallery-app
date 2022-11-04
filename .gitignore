@@ -1,5 +1,7 @@
 minio-storage
 mongo-data
+redis
+worker-tmp
 
 # Stuff
 .DS_Store
