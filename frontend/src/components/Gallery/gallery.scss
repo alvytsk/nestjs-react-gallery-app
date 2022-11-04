@@ -1,0 +1,18 @@
+.gallery {
+    // border: 1px solid #cccccc;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 30px;
+    justify-content: space-around;
+
+    img {
+        margin: 10px;
+        flex-basis: 25%;
+        flex-grow: 0;
+	    flex-shrink: 0;
+        object-fit: cover;
+        vertical-align: middle;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    }
+}
+

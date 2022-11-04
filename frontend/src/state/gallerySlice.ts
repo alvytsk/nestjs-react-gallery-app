@@ -1,10 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { GalleryFile } from '~/types/gallery';
+import { GalleryFileDTO } from '~/types/gallery';
 
 interface GalleryState {
   count: number;
-  files: GalleryFile[];
+  files: GalleryFileDTO[];
 }
 
 const initialState = { count: 0, files: [] } as GalleryState;

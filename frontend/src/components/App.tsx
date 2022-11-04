@@ -1,15 +1,14 @@
 import React from 'react';
 import './app.scss';
-import Gallery from './Gallery';
 import UploadForm from './UploadForm';
-import GalleryItem from './Gallery/GalleryItem';
+import Gallery from './Gallery/Gallery';
 
 const App = () => {
   return (
     <section className="container">
       <div className="app-wrapper">
         <UploadForm />
-        <GalleryItem />
+        <Gallery />
       </div>
     </section>
   );
