@@ -1,18 +1,52 @@
 .gallery {
-    // border: 1px solid #cccccc;
     display: flex;
     flex-wrap: wrap;
     margin-top: 30px;
     justify-content: space-around;
 
-    img {
+    .gallery__item {
+        position: relative;
+        border: 1px solid #cccccc;
         margin: 10px;
-        flex-basis: 25%;
-        flex-grow: 0;
-	    flex-shrink: 0;
-        object-fit: cover;
-        vertical-align: middle;
-        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+        
+
+        /* The overlay effect - lays on top of the container and over the image */
+        & .item__overlay {
+            position: absolute;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5); /* Black see-through */
+            color: #f1f1f1;
+            width: 100%;
+            transition: .1s ease;
+            opacity:0;
+            text-align: center;
+
+            & .item__overlay-text {
+                color: white;
+                font-size: 12px;
+                padding: 5px;
+            }
+        }
+        
+        &:hover {
+            transform: scale(1.1);
+            transition: all ease-in 0.1s;
+        }
+
+        /* When you mouse over the container, fade in the overlay title */
+        &:hover .item__overlay {
+            opacity: 1;
+        }
+
+        img {
+            flex-basis: 25%;
+            flex-grow: 0;
+            flex-shrink: 0;
+            object-fit: cover;
+            vertical-align: middle;
+            box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+        }
     }
+
 }
 
