@@ -1,4 +1,4 @@
-export type GalleryFile = {
+export type GalleryItemDTO = {
   id: string;
   name: string;
   type: string;

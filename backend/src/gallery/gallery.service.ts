@@ -16,6 +16,8 @@ import sharp from 'sharp';
 import { UploadedFile, UploadedFileDocument } from './schemas/file.schema';
 import { CloudService } from '../cloud/cloud.service';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
+import { StorageFile } from 'src/cloud/dto/download.dto';
+import { fileValidationMessageList } from 'aws-sdk/clients/frauddetector';
 
 @Injectable()
 export class GalleryService {
@@ -30,9 +32,6 @@ export class GalleryService {
     filename: string;
     extension: string;
   } {
-    console.log(originalFilename);
-
-    // const timestamp = Date.now().toString();
     const hashedFileName = crypto
       .createHash('md5')
       .update(originalFilename)
@@ -41,8 +40,6 @@ export class GalleryService {
       originalFilename.lastIndexOf('.'),
       originalFilename.length,
     );
-
-    console.log(hashedFileName);
 
     return { filename: hashedFileName, extension: extension };
   }
@@ -55,27 +52,7 @@ export class GalleryService {
     return true;
   }
 
-  // private generateThumbnail = async (
-  //   input,
-  //   maxDimension = { width: 640, height: 480 },
-  //   square = false,
-  // ) => {
-  //   const transform = sharp()
-  //     .resize({
-  //       width: maxDimension.width,
-  //       height: square ? maxDimension.width : maxDimension.height,
-  //       fit: square ? 'cover' : 'inside',
-  //     })
-  //     .sharpen()
-  //     .webp({ quality: 80 })
-  //     .on('info', (info) => {
-  //       console.log({ info });
-  //     });
-
-  //   return input.pipe(transform);
-  // };
-
-  async generateThumbnail(thumbFile: UploadedDto, file: UploadedDto) {
+  private async generateThumbnail(thumbFile: UploadedDto, file: UploadedDto) {
     try {
       thumbFile.buffer = await sharp(file.buffer)
         .resize(200, 200)
@@ -102,15 +79,14 @@ export class GalleryService {
     });
   }
 
-  async uploadFile(files: Array<UploadedDto>) {
+  async uploadFiles(files: Array<UploadedDto>) {
     this.checkFiles(files);
 
     try {
       const result = await Promise.all(
-        files.map(async (file) => await this.processThumbnails(file)),
+        files.map(async (file) => await this.uploadFile(file)),
       );
 
-      // console.log(result);
       return result;
     } catch (err) {
       console.log(err);
@@ -118,10 +94,15 @@ export class GalleryService {
     }
   }
 
-  async processThumbnails(file: UploadedDto) {
+  async uploadFile(file: UploadedDto) {
     const hashedFilename = this.generateHashedFilename(file.originalname);
     const imageType = file.mimetype.match(/^image\/(.*)/)[1];
     const promises = [];
+
+    const originalFile: UploadedDto = {
+      ...file,
+      hashedname: hashedFilename.filename + hashedFilename.extension,
+    };
 
     const thumbFile: UploadedDto = {
       ...file,
@@ -134,53 +115,78 @@ export class GalleryService {
         await this.generateThumbnail(thumbFile, file),
       ),
     );
-    promises.push(
-      this.cloudService.uploadFile({
-        ...file,
-        hashedname: file.originalname,
-      }),
-    );
+    promises.push(this.cloudService.uploadFile(originalFile));
 
     const result = await Promise.all(promises).then(async () => {
       const fileObject = {
         name: file.originalname,
+        hashedname: file.hashedname,
         url: await this.cloudService.generatePresignedUrl(thumbFile.hashedname),
         type: file.mimetype,
         id: file.fieldname,
       };
 
-      // console.log(fileObject);
-
       return fileObject;
     });
 
-    await this.pushImageFileToDB(hashedFilename.filename, file);
+    await this.pushImageFileToDB(
+      hashedFilename.filename,
+      originalFile.originalname,
+      originalFile.mimetype,
+      originalFile.hashedname,
+      thumbFile.hashedname,
+    );
 
     return result;
   }
 
-  async pushImageFileToDB(id: string, file: UploadedDto) {
+  // async downloadFile(id: string): Promise<StorageFile> {}
+
+  async getAll() {
+    const files = await this.uploadedFileModel.find().exec();
+
+    // const result = [];
+
+    const result = await Promise.all(
+      files.map(async (file) => {
+        const url = await this.cloudService.generatePresignedUrl(
+          file.thumbnail,
+        );
+
+        return {
+          name: file.originalName,
+          hashedname: file.hashedName,
+          url: url,
+          type: file.mimeType,
+          id: file.id,
+        };
+      }),
+    );
+
+    console.log({ result });
+
+    return result;
+  }
+
+  private async pushImageFileToDB(
+    id: string,
+    original: string,
+    mimeType: string,
+    hashedFilename: string,
+    thumbnailFilename: string,
+  ) {
     const imageData = {
       id,
-      original: {
-        name: file.originalname,
-        mimeType: file.mimetype,
-      },
-      thumbnail: {
-        path: '',
-        key: '',
-        bucket: '',
-      },
-      image: {
-        bucket: '',
-        key: '',
-        path: '',
-      },
+      originalName: original,
+      mimeType: mimeType,
+      hashedName: hashedFilename,
+      thumbnail: thumbnailFilename,
     };
+
     await this.saveFile(imageData);
   }
 
-  async saveFile(awsFile: any) {
+  private async saveFile(awsFile: any) {
     try {
       const newFile = new this.uploadedFileModel(awsFile);
       await newFile.save();

@@ -1,17 +1,14 @@
 import React from 'react';
-import ItemMenu from './ItemMenu';
-import { useAppSelector } from '~/hooks/state';
+import { GalleryItemDTO } from '~/types/gallery';
 
-const GalleryItem = () => {
-  const files = useAppSelector((state) => state.gallery.files);
-  if (!files?.length) {
-    return null;
-  }
+const GalleryItem: React.FC<{ file: GalleryItemDTO }> = ({ file }) => {
   return (
-    <div>
-      {files?.map((file) => (
-        <ItemMenu key={file.id} file={file} />
-      ))}
+    <div className="gallery__item">
+      <img src={file.url} alt={file.name} />
+      <div className="item__overlay">
+        <div className="item__overlay-text">{file.name}</div>
+        <button>Download</button>
+      </div>
     </div>
   );
 };
