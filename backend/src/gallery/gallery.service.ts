@@ -117,7 +117,7 @@ export class GalleryService {
     );
     promises.push(this.cloudService.uploadFile(originalFile));
 
-    const result = await Promise.all(promises).then(async () => {
+    let result = await Promise.all(promises).then(async () => {
       const fileObject = {
         name: file.originalname,
         hashedname: file.hashedname,
@@ -129,13 +129,22 @@ export class GalleryService {
       return fileObject;
     });
 
-    await this.pushImageFileToDB(
+    const record = await this.pushImageFileToDB(
       hashedFilename.filename,
       originalFile.originalname,
       originalFile.mimetype,
       originalFile.hashedname,
       thumbFile.hashedname,
     );
+
+    console.log({ record });
+
+    result = {
+      ...result,
+      id: record._id,
+    };
+
+    console.log({ result });
 
     return result;
   }
@@ -158,14 +167,27 @@ export class GalleryService {
           hashedname: file.hashedName,
           url: url,
           type: file.mimeType,
-          id: file.id,
+          id: file._id,
         };
       }),
     );
 
-    console.log({ result });
-
     return result;
+  }
+
+  async deleteFile(id: string) {
+    const file: UploadedFile = await this.uploadedFileModel.findById(id);
+
+    const promises = [];
+
+    promises.push(this.cloudService.deleteFile(file.hashedName));
+    promises.push(this.cloudService.deleteFile(file.thumbnail));
+
+    await Promise.all(promises).then(async () => {
+      await this.uploadedFileModel.findByIdAndDelete(id);
+    });
+
+    return id;
   }
 
   private async pushImageFileToDB(
@@ -183,13 +205,13 @@ export class GalleryService {
       thumbnail: thumbnailFilename,
     };
 
-    await this.saveFile(imageData);
+    return await this.saveFile(imageData);
   }
 
   private async saveFile(awsFile: any) {
     try {
       const newFile = new this.uploadedFileModel(awsFile);
-      await newFile.save();
+      return await newFile.save();
     } catch (error) {
       throw new ConflictException(error.keyValue);
     }

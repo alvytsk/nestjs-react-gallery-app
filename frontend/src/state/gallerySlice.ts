@@ -36,7 +36,22 @@ export const getImages = createAsyncThunk<undefined, undefined, { rejectValue: s
     try {
       // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
       const response = await fetch('http://localhost:3001/api/gallery/getAll');
-      return response.json();
+      return await response.json();
+    } catch (err) {
+      return thunkApi.rejectWithValue('Error');
+    }
+  }
+);
+
+export const deleteImage = createAsyncThunk<undefined, string, { rejectValue: string }>(
+  'gallery/deleteFile',
+  async (id, thunkApi) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/gallery/' + id, {
+        method: 'DELETE'
+      });
+
+      return await response.json();
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
     }
@@ -60,6 +75,11 @@ const gallerySlice = createSlice({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(getImages.fulfilled, (state, action: PayloadAction<any>) => {
       state.files = action.payload.data;
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    builder.addCase(deleteImage.fulfilled, (state, action: PayloadAction<any>) => {
+      state.files = state.files.filter((obj) => obj.id !== action.payload.id);
     });
   }
 });
