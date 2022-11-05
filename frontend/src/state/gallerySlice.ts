@@ -1,16 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { GalleryFileDTO } from '~/types/gallery';
+import { GalleryItemDTO } from '~/types/gallery';
 
 interface GalleryState {
   count: number;
-  files: GalleryFileDTO[];
+  files: GalleryItemDTO[];
 }
 
 const initialState = { count: 0, files: [] } as GalleryState;
 
 export const uploadImage = createAsyncThunk<undefined, File[], { rejectValue: string }>(
-  'user/uploadFile',
+  'gallery/uploadFiles',
   async (files, thunkApi) => {
     try {
       const formData = new FormData();
@@ -19,10 +19,23 @@ export const uploadImage = createAsyncThunk<undefined, File[], { rejectValue: st
       }
 
       // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
-      const response = await fetch('http://localhost:3001/api/user/upload', {
+      const response = await fetch('http://localhost:3001/api/gallery/upload', {
         method: 'POST',
         body: formData
       });
+      return response.json();
+    } catch (err) {
+      return thunkApi.rejectWithValue('Error');
+    }
+  }
+);
+
+export const getImages = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
+  'gallery/getAllFiles',
+  async (_, thunkApi) => {
+    try {
+      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
+      const response = await fetch('http://localhost:3001/api/gallery/getAll');
       return response.json();
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
@@ -35,18 +48,18 @@ const gallerySlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(uploadImage.pending, (state) => {
-      console.log('pending');
-    });
+    // builder.addCase(uploadImage.pending, (state) => {});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(uploadImage.fulfilled, (state, action: PayloadAction<any>) => {
-      console.log('fulfilled');
-      state.files = action.payload;
+      state.files = [...state.files, ...action.payload];
     });
 
-    builder.addCase(uploadImage.rejected, (state, { payload }) => {
-      console.log('rejected');
+    // builder.addCase(uploadImage.rejected, (state, { payload }) => {});
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    builder.addCase(getImages.fulfilled, (state, action: PayloadAction<any>) => {
+      state.files = action.payload.data;
     });
   }
 });

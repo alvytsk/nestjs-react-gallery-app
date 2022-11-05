@@ -18,14 +18,6 @@ export class CloudService {
   }
 
   uploadFile(file: UploadedDto) {
-    // const s3 = new S3({
-    //   accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
-    //   secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
-    //   endpoint: this.configService.get('MINIO_URI'),
-    //   s3ForcePathStyle: true, // needed with minio
-    //   signatureVersion: 'v4',
-    // });
-
     return this.s3
       .upload({
         Bucket: 'test',
@@ -37,13 +29,6 @@ export class CloudService {
   }
 
   generatePresignedUrl(key: string, expireTimeInSec = 15 * 60) {
-    // const s3 = new S3({
-    //   accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
-    //   secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
-    //   endpoint: this.configService.get('MINIO_URI'),
-    //   s3ForcePathStyle: true, // needed with minio
-    //   signatureVersion: 'v4',
-    // });
     console.log(key);
 
     const params = {

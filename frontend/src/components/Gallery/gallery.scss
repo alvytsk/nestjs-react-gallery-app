@@ -20,11 +20,12 @@
             transition: .1s ease;
             opacity:0;
             text-align: center;
+            padding-bottom: 5px;
 
             & .item__overlay-text {
                 color: white;
                 font-size: 12px;
-                padding: 5px;
+                padding: 3px;
             }
         }
         
