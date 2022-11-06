@@ -12,6 +12,7 @@ import {
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 import { GalleryService } from './gallery.service';
+import { Response } from 'express';
 
 @Controller('gallery')
 export class GalleryController {
@@ -52,5 +53,26 @@ export class GalleryController {
   async dowloadFile(@Param('id') fileId: string, @Res() res: Response) {
     // const result = await this.service.uploadFile(files);
     // return result;
+  }
+
+  @Get('test')
+  async createQueue() {
+    const result = await this.galleryService.testQueue();
+    return {
+      jobId: result,
+    };
+  }
+
+  @Get('test/:id')
+  async getJobResult(@Res() response: Response, @Param('id') id: string) {
+    const result = await this.galleryService.getQueueStatus(id);
+
+    if (!result) {
+      return response.sendStatus(HttpStatus.NOT_FOUND);
+    }
+
+    return response.status(HttpStatus.OK).json({
+      progress: result,
+    });
   }
 }

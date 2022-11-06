@@ -81,8 +81,41 @@ services:
       - /usr/src/app/node_modules
     restart: unless-stopped
 
+  redis:
+    image: redis:alpine
+    container_name: gallery-redis
+    restart: unless-stopped
+    networks:
+      - gallery-network
+    ports:
+      - '6379:6379'
+    # command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    command: redis-server --save 20 1 --loglevel warning
+    volumes: 
+      - ./redis:/data
+  
+  worker:
+    image: gallery-worker
+    container_name: worker
+    build:
+      context: ./worker
+      dockerfile: ./Dockerfile
+    networks:
+      - gallery-network
+    restart: unless-stopped
+    depends_on:
+      - redis
+    volumes:
+      - ./worker-tmp:/usr/src/app/files
+    environment:
+      REDIS_URL: 'redis://redis:6379'
+      WEB_CONCURRENCY: 3
+
 volumes:
   minio-storage:
+  worker:
+  redis: 
+    driver: local
 
 networks:
   gallery-network:

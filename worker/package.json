@@ -1,0 +1,28 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start:dev": "node src/worker.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ./",
+    "lint:fix": "eslint --fix --ext .js,.jsx,.ts,.tsx ./"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bull": "^4.10.1",
+    "dotenv": "^16.0.3",
+    "mongoose": "^6.7.1",
+    "sharp": "^0.31.2",
+    "throng": "^5.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.26.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.7.1"
+  }
+}

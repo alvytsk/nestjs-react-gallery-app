@@ -16,17 +16,20 @@ import sharp from 'sharp';
 import { UploadedFile, UploadedFileDocument } from './schemas/file.schema';
 import { CloudService } from '../cloud/cloud.service';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
-import { StorageFile } from 'src/cloud/dto/download.dto';
-import { fileValidationMessageList } from 'aws-sdk/clients/frauddetector';
+import Queue from 'bull';
 
 @Injectable()
 export class GalleryService {
+  private filesProcQueue: Queue.Queue<any>;
+
   constructor(
     private configService: ConfigService,
     private cloudService: CloudService,
     @InjectModel(UploadedFile.name)
     private uploadedFileModel: Model<UploadedFileDocument>,
-  ) {}
+  ) {
+    this.filesProcQueue = new Queue('files-processing', 'redis://redis:6379');
+  }
 
   private generateHashedFilename(originalFilename: string): {
     filename: string;
@@ -215,5 +218,25 @@ export class GalleryService {
     } catch (error) {
       throw new ConflictException(error.keyValue);
     }
+  }
+
+  async testQueue() {
+    const job = await this.filesProcQueue.add({});
+
+    console.log(`Job ${job.id} created`);
+
+    return job.id;
+  }
+
+  async getQueueStatus(id: string | number) {
+    const job = await this.filesProcQueue.getJob(id);
+
+    if (!job) {
+      return;
+    }
+
+    const progress = await job.progress();
+
+    return progress;
   }
 }
