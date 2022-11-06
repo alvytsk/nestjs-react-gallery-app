@@ -7,6 +7,7 @@ import {
   UseInterceptors,
   HttpStatus,
   UploadedFiles,
+  Delete,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
@@ -38,6 +39,13 @@ export class GalleryController {
   async uploadFiles(@UploadedFiles() files: Array<UploadedDto>) {
     const result = await this.galleryService.uploadFiles(files);
     return result;
+  }
+
+  @Delete('/:id')
+  async deleteFile(@Param('id') fileId: string) {
+    const result = await this.galleryService.deleteFile(fileId);
+    console.log({ result });
+    return { id: result };
   }
 
   @Get('/download/:id')

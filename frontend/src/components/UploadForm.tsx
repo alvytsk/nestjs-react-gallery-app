@@ -9,6 +9,7 @@ const UploadForm = () => {
   const onUpload = (event) => {
     event.preventDefault();
     file && dispatch(uploadImage(file));
+    setFile(null);
   };
 
   const onFileChange = (event) => {
