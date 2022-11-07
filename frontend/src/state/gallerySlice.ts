@@ -4,10 +4,11 @@ import { GalleryItemDTO } from '~/types/gallery';
 
 interface GalleryState {
   count: number;
+  jobId: string | number;
   files: GalleryItemDTO[];
 }
 
-const initialState = { count: 0, files: [] } as GalleryState;
+const initialState = { count: 0, files: [], jobId: 0 } as GalleryState;
 
 export const uploadImage = createAsyncThunk<undefined, File[], { rejectValue: string }>(
   'gallery/uploadFiles',
@@ -58,6 +59,20 @@ export const deleteImage = createAsyncThunk<undefined, string, { rejectValue: st
   }
 );
 
+export const getUploadingStatus = createAsyncThunk<
+  undefined,
+  string | number,
+  { rejectValue: string }
+>('gallery/getUploadingStatus', async (jobId, thunkApi) => {
+  try {
+    // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
+    const response = await fetch('http://localhost:3001/api/gallery/test/' + jobId);
+    return await response.json();
+  } catch (err) {
+    return thunkApi.rejectWithValue('Error');
+  }
+});
+
 const gallerySlice = createSlice({
   name: 'gallery',
   initialState,
@@ -67,7 +82,8 @@ const gallerySlice = createSlice({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(uploadImage.fulfilled, (state, action: PayloadAction<any>) => {
-      state.files = [...state.files, ...action.payload];
+      // state.files = [...state.files, ...action.payload];
+      state.jobId = action.payload;
     });
 
     // builder.addCase(uploadImage.rejected, (state, { payload }) => {});
@@ -80,6 +96,16 @@ const gallerySlice = createSlice({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(deleteImage.fulfilled, (state, action: PayloadAction<any>) => {
       state.files = state.files.filter((obj) => obj.id !== action.payload.id);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    builder.addCase(getUploadingStatus.fulfilled, (state, action: PayloadAction<any>) => {
+      const { progress } = action.payload;
+
+      if (Number(progress) === 100) {
+        state.jobId = 0;
+        state.files = [...state.files, ...action.payload.files];
+      }
     });
   }
 });

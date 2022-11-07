@@ -140,14 +140,14 @@ export class GalleryService {
       thumbFile.hashedname,
     );
 
-    console.log({ record });
+    // console.log({ record });
 
     result = {
       ...result,
       id: record._id,
     };
 
-    console.log({ result });
+    // console.log({ result });
 
     return result;
   }
@@ -220,8 +220,8 @@ export class GalleryService {
     }
   }
 
-  async testQueue() {
-    const job = await this.filesProcQueue.add({});
+  async testQueue(files: Array<UploadedDto>) {
+    const job = await this.filesProcQueue.add({ files });
 
     console.log(`Job ${job.id} created`);
 
@@ -235,8 +235,39 @@ export class GalleryService {
       return;
     }
 
-    const progress = await job.progress();
+    let progress = await job.progress();
+    let data = [];
+    let result;
 
-    return progress;
+    const jobState = await job.getState();
+
+    if (jobState === 'completed') {
+      progress = 100;
+
+      data = await job.finished();
+
+      result = await Promise.all(
+        data.map(async (file) => {
+          const url = await this.cloudService.generatePresignedUrl(
+            file.thumbFile,
+          );
+
+          return {
+            ...file,
+            url: url,
+          };
+        }),
+      );
+
+      // data.forEach(async function (file) {
+      //   file.url = await this.cloudService.generatePresignedUrl(file.thumbFile);
+      // });
+
+      console.log(result);
+
+      // data.job.remove();
+    }
+
+    return { progress, files: result };
   }
 }

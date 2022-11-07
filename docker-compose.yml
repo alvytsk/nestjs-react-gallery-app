@@ -107,9 +107,11 @@ services:
       - redis
     volumes:
       - ./worker-tmp:/usr/src/app/files
+    env_file:
+      - backend/.env
     environment:
       REDIS_URL: 'redis://redis:6379'
-      WEB_CONCURRENCY: 3
+      WEB_CONCURRENCY: 1
 
 volumes:
   minio-storage:
