@@ -1,39 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '~/hooks/state';
 import { uploadImage, getUploadingStatus } from '~/state/gallerySlice';
+import FilesList from './FilesList';
 
 const UploadForm = () => {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
+  const inputRef = useRef<HTMLInputElement>(null);
   const jobId = useAppSelector((state) => state.gallery.jobId);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const pollInterval = setInterval(() => {
+    const pollHandler = setInterval(() => {
       jobId && dispatch(getUploadingStatus(jobId));
-    }, 1000);
+    }, 100);
 
-    if (!jobId && pollInterval) {
-      clearInterval(pollInterval);
+    if (!jobId && pollHandler) {
+      clearInterval(pollHandler);
     }
 
-    return () => clearInterval(pollInterval);
+    return () => clearInterval(pollHandler);
   }, [dispatch, jobId]);
 
   const onUpload = (event) => {
     event.preventDefault();
-    file && dispatch(uploadImage(file));
-    setFile(null);
+    files && dispatch(uploadImage(files));
+    setFiles([]);
+    // setFilesInfo([]);
+
+    if (inputRef.current !== null) {
+      inputRef.current.value = '';
+    }
   };
 
   const onFileChange = (event) => {
-    setFile(event.target.files);
+    setFiles(event.target.files);
+    // setFilesInfo(Array.from(event.target.files));
+  };
+
+  const onReset = (event) => {
+    setFiles([]);
+    if (inputRef.current !== null) {
+      inputRef.current.value = '';
+    }
   };
 
   return (
     <div>
       <form onSubmit={onUpload}>
-        <input multiple type="file" onChange={onFileChange} />
+        <input multiple type="file" ref={inputRef} onChange={onFileChange} />
         <button type="submit">Upload</button>
+        {files.length ? <button onClick={onReset}>Reset</button> : null}
+        <FilesList {...files} />
       </form>
     </div>
   );
