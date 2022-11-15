@@ -27,32 +27,34 @@ export const uploadFiles = createAsyncThunk<undefined, File[], { rejectValue: st
         console.log(response.data);
         const hashedFilename = response.data.hashedFilename;
 
-        const formData = new FormData();
-        formData.append('file', file);
-        const result: AxiosResponse = await axios.put(response.data.url, formData, {
+        // const formData = new FormData();
+        // formData.append('file', file);
+        const config = {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'application/octet-stream'
           },
           onUploadProgress
-        });
+        };
+        const result = await axios.put(response.data.url, file, config);
+
+        console.log(result);
 
         if (result.status === 200) {
           response = await api.get('gallery/uploaded/' + hashedFilename);
         }
-      });
 
-      // const formData = new FormData();
-      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
-      // const response = await fetch('http://localhost:3001/api/gallery/upload', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // return response.json();
-      // return await api.post('http://localhost:3001/api/gallery/upload', formData, {
-      //   headers: {
-      //     'Content-type': 'multipart/form-data'
-      //   }
-      // });
+        // const formData = new FormData();
+        // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
+        // const response = await fetch('http://localhost:3001/api/gallery/upload', {
+        //   method: 'POST',
+        //   body: formData
+        // });
+        // return response.json();
+        // return await api.post('http://localhost:3001/api/gallery/upload', formData, {
+        //   headers: {
+        //     'Content-type': 'multipart/form-data'
+        //   }
+      });
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
     }

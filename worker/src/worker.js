@@ -1,11 +1,13 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-import fs from 'fs';
+// import fs from 'fs';
 import { generateHashedFilename } from './utils.js';
-import AWS from 'aws-sdk';
+// import AWS from 'aws-sdk';
+import S3Service from './s3service.js';
+import Database from './db.js';
 import sharp from 'sharp';
-import mongoose from 'mongoose';
+// import mongoose from 'mongoose';
 
 // console.log(process.env);
 
@@ -14,7 +16,7 @@ let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 // Spin up multiple processes to handle jobs to take advantage of more CPU cores
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
-let workers = process.env.WEB_CONCURRENCY || 2;
+let workers = process.env.WEB_CONCURRENCY || 1;
 
 // console.log({ workers });
 
@@ -22,29 +24,33 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.MINIO_ACCESS_KEY,
-  secretAccessKey: process.env.MINIO_SECRET_KEY,
-  endpoint: process.env.MINIO_URI,
-  s3ForcePathStyle: true, // needed with minio
-  signatureVersion: 'v4'
-});
+// const s3 = new AWS.S3({
+//   accessKeyId: process.env.MINIO_ACCESS_KEY,
+//   secretAccessKey: process.env.MINIO_SECRET_KEY,
+//   endpoint: process.env.MINIO_URI,
+//   s3ForcePathStyle: true, // needed with minio
+//   signatureVersion: 'v4'
+// });
 
-mongoose.connect(process.env.MONGODB_URI);
+// try {
+// mongoose.connect(process.env.MONGODB_URI);
 // Get the default connection
-const db = mongoose.connection;
+// const db = mongoose.connection;
 // Bind connection to error event (to get notification of connection errors)
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+// db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+// } catch (e) {
+//   console.error(e);
+// }
 
-const uploadedFileSchema = new mongoose.Schema({
-  id: String,
-  originalName: String,
-  mimeType: String,
-  hashedName: String,
-  thumbnail: String
-});
-// Compile model from schema
-const uploadedFileModel = mongoose.model('UploadedFile', uploadedFileSchema);
+// const uploadedFileSchema = new mongoose.Schema({
+//   id: String,
+//   originalName: String,
+//   mimeType: String,
+//   hashedName: String,
+//   thumbnail: String
+// });
+// // Compile model from schema
+// const uploadedFileModel = mongoose.model('UploadedFile', uploadedFileSchema);
 
 async function generateThumbnail(thumbFile, file) {
   try {
@@ -82,8 +88,8 @@ async function pushImageFileToDB(id, original, mimeType, hashedFilename, thumbna
     thumbnail: thumbnailFilename
   };
 
-  const uploadFileModelInstance = new uploadedFileModel(imageData);
-  return uploadFileModelInstance.save();
+  // const uploadFileModelInstance = new uploadedFileModel(imageData);
+  // return uploadFileModelInstance.save();
 }
 
 async function uploadFile(file) {
@@ -139,25 +145,55 @@ function start(id) {
 
   console.log(`Worker ${id} started`);
 
+  const s3 = new S3Service({
+    accessKeyId: process.env.MINIO_ACCESS_KEY,
+    secretAccessKey: process.env.MINIO_SECRET_KEY,
+    endpoint: process.env.MINIO_URI
+  });
+
+  const db = new Database({ uri: process.env.MONGODB_URI });
+
   fileProcQueue.process(async (job, done) => {
     let progress = 0;
     const { fileId } = job.data;
 
     console.log({ fileId });
 
-    const result = { status: 'done' };
+    const readStream = s3.getReadableStream('test', fileId);
+
+    const pipeline = sharp();
+    pipeline
+      .resize(200, 200)
+      .sharpen()
+      .webp({ quality: 80 })
+      .toBuffer()
+      .then(async (data) => {
+        console.log(data);
+        await s3.uploadFile('test', `thumbnail-${fileId}`, data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    readStream.pipe(pipeline);
+
+    // const writeStream = await sharp(new Buffer.from(file.buffer, 'binary'))
+    //   .resize(200, 200)
+    //   .sharpen()
+    //   .webp({ quality: 80 })
+    //   .toBuffer();
 
     // let progressStep = 100 / files.length;
     // const result = await Promise.all(files.map(async (file) => await uploadFile(file)));
 
     // job.progress(100);
 
-    console.log(result);
+    // console.log(result);
 
-    done(null, result);
+    done(null, {});
   });
 }
 
 // Initialize the clustered worker process
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
 throng({ workers, start });
+// start(1);
