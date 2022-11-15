@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Req,
   Res,
   Param,
   UseInterceptors,
@@ -33,6 +34,26 @@ export class GalleryController {
       status: 200,
       data: todos,
     });
+  }
+
+  @Get('/getSignedUrl/:filename')
+  async getSignedUrl(
+    @Param('filename') filename: string,
+    @Res() response: Response,
+  ) {
+    const result = await this.galleryService.generateUrlForUpload(filename);
+
+    return response.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('/uploaded/:hashedFilename')
+  async uploadedFile(
+    @Param('hashedFilename') hashedFilename: string,
+    @Res() response: Response,
+  ) {
+    console.log('uploadedFile');
+    const result = await this.galleryService.execUploadedFile(hashedFilename);
+    return response.status(HttpStatus.OK).json(result);
   }
 
   @Post('/upload')

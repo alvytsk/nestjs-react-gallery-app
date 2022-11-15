@@ -141,10 +141,14 @@ function start(id) {
 
   fileProcQueue.process(async (job, done) => {
     let progress = 0;
-    const { files } = job.data;
+    const { fileId } = job.data;
 
-    let progressStep = 100 / files.length;
-    const result = await Promise.all(files.map(async (file) => await uploadFile(file)));
+    console.log({ fileId });
+
+    const result = { status: 'done' };
+
+    // let progressStep = 100 / files.length;
+    // const result = await Promise.all(files.map(async (file) => await uploadFile(file)));
 
     // job.progress(100);
 

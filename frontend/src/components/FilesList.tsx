@@ -30,12 +30,14 @@ const FilesList = (files) => {
     <>
       {infos.length ? (
         <table className="files-table">
-          {infos.map((info) => (
-            <tr key={info.name}>
-              <td>{info.name}</td>
-              <td>{formatBytes(info.size)}</td>
-            </tr>
-          ))}
+          <tbody>
+            {infos.map((info) => (
+              <tr key={info.name}>
+                <td>{info.name}</td>
+                <td>{formatBytes(info.size)}</td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       ) : null}
     </>

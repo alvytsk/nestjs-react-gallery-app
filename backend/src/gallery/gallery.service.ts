@@ -220,6 +220,16 @@ export class GalleryService {
     }
   }
 
+  async execUploadedFile(fileId: string) {
+    const job = await this.filesProcQueue.add({ fileId });
+
+    console.log(`Job ${job.id} created`);
+
+    return {
+      jobId: job.id,
+    };
+  }
+
   async testQueue(files: Array<UploadedDto>) {
     const job = await this.filesProcQueue.add({ files });
 
@@ -269,5 +279,18 @@ export class GalleryService {
     }
 
     return { progress, files: result };
+  }
+
+  async generateUrlForUpload(filename) {
+    const hashedFilename = this.generateHashedFilename(filename);
+    const url = await this.cloudService.generatePresignedUrl(
+      hashedFilename.filename + hashedFilename.extension,
+      'putObject',
+    );
+
+    return {
+      url,
+      hashedFilename: hashedFilename.filename + hashedFilename.extension,
+    };
   }
 }

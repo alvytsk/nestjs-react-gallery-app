@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '~/hooks/state';
-import { uploadImage, getUploadingStatus } from '~/state/gallerySlice';
+import { uploadFiles, getUploadingStatus } from '~/state/gallerySlice';
 import FilesList from './FilesList';
 
 const UploadForm = () => {
@@ -23,9 +23,8 @@ const UploadForm = () => {
 
   const onUpload = (event) => {
     event.preventDefault();
-    files && dispatch(uploadImage(files));
+    files && dispatch(uploadFiles(files));
     setFiles([]);
-    // setFilesInfo([]);
 
     if (inputRef.current !== null) {
       inputRef.current.value = '';
@@ -34,7 +33,6 @@ const UploadForm = () => {
 
   const onFileChange = (event) => {
     setFiles(event.target.files);
-    // setFilesInfo(Array.from(event.target.files));
   };
 
   const onReset = (event) => {

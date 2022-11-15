@@ -1,4 +1,5 @@
-FROM node:lts-bullseye-slim AS development
+FROM node:lts-alpine AS development
+ENV NODE_ENV development
 WORKDIR /usr/src/app
 COPY --chown=node:node package*.json ./
 RUN yarn

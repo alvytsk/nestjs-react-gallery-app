@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { GalleryItemDTO } from '~/types/gallery';
+import api from './api';
+import axios, { AxiosResponse } from 'axios';
 
 interface GalleryState {
   count: number;
@@ -10,41 +12,69 @@ interface GalleryState {
 
 const initialState = { count: 0, files: [], jobId: 0 } as GalleryState;
 
-export const uploadImage = createAsyncThunk<undefined, File[], { rejectValue: string }>(
+export const uploadFiles = createAsyncThunk<undefined, File[], { rejectValue: string }>(
   'gallery/uploadFiles',
   async (files, thunkApi) => {
-    try {
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append(`${i}-${files[i].lastModified}`, files[i]);
-      }
+    const onUploadProgress = (event) => {
+      const percentage = Math.round((100 * event.loaded) / event.total);
+      console.log(`${percentage}%`);
+    };
 
-      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
-      const response = await fetch('http://localhost:3001/api/gallery/upload', {
-        method: 'POST',
-        body: formData
+    try {
+      Array.from(files).forEach(async (file) => {
+        let response = await api.get('gallery/getSignedUrl/' + file.name);
+
+        console.log(response.data);
+        const hashedFilename = response.data.hashedFilename;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        const result: AxiosResponse = await axios.put(response.data.url, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          onUploadProgress
+        });
+
+        if (result.status === 200) {
+          response = await api.get('gallery/uploaded/' + hashedFilename);
+        }
       });
-      return response.json();
+
+      // const formData = new FormData();
+      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
+      // const response = await fetch('http://localhost:3001/api/gallery/upload', {
+      //   method: 'POST',
+      //   body: formData
+      // });
+      // return response.json();
+      // return await api.post('http://localhost:3001/api/gallery/upload', formData, {
+      //   headers: {
+      //     'Content-type': 'multipart/form-data'
+      //   }
+      // });
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
     }
   }
 );
 
-export const getImages = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
+export const getFiles = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
   'gallery/getAllFiles',
   async (_, thunkApi) => {
     try {
       // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
       const response = await fetch('http://localhost:3001/api/gallery/getAll');
       return await response.json();
+
+      // return api.get('gallery/getAll');
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
     }
   }
 );
 
-export const deleteImage = createAsyncThunk<undefined, string, { rejectValue: string }>(
+export const deleteFile = createAsyncThunk<undefined, string, { rejectValue: string }>(
   'gallery/deleteFile',
   async (id, thunkApi) => {
     try {
@@ -81,7 +111,7 @@ const gallerySlice = createSlice({
     // builder.addCase(uploadImage.pending, (state) => {});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    builder.addCase(uploadImage.fulfilled, (state, action: PayloadAction<any>) => {
+    builder.addCase(uploadFiles.fulfilled, (state, action: PayloadAction<any>) => {
       // state.files = [...state.files, ...action.payload];
       state.jobId = action.payload;
     });
@@ -89,12 +119,12 @@ const gallerySlice = createSlice({
     // builder.addCase(uploadImage.rejected, (state, { payload }) => {});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    builder.addCase(getImages.fulfilled, (state, action: PayloadAction<any>) => {
+    builder.addCase(getFiles.fulfilled, (state, action: PayloadAction<any>) => {
       state.files = action.payload.data;
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    builder.addCase(deleteImage.fulfilled, (state, action: PayloadAction<any>) => {
+    builder.addCase(deleteFile.fulfilled, (state, action: PayloadAction<any>) => {
       state.files = state.files.filter((obj) => obj.id !== action.payload.id);
     });
 
