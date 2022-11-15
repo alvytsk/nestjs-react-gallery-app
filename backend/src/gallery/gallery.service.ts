@@ -220,8 +220,14 @@ export class GalleryService {
     }
   }
 
-  async execUploadedFile(fileId: string) {
-    const job = await this.filesProcQueue.add({ fileId });
+  async execUploadedFile(data: {
+    fileId: string;
+    originalFilename: string;
+    mimeType: string;
+  }) {
+    console.log({ data });
+
+    const job = await this.filesProcQueue.add(data);
 
     console.log(`Job ${job.id} created`);
 

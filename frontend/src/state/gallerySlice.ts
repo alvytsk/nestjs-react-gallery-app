@@ -40,7 +40,9 @@ export const uploadFiles = createAsyncThunk<undefined, File[], { rejectValue: st
         console.log(result);
 
         if (result.status === 200) {
-          response = await api.get('gallery/uploaded/' + hashedFilename);
+          response = await api.get('gallery/uploaded/', {
+            params: { hashedFilename, originalFilename: file.name }
+          });
         }
 
         // const formData = new FormData();

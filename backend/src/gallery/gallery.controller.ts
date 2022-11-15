@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Req,
+  Query,
   Res,
   Param,
   UseInterceptors,
@@ -13,7 +13,7 @@ import {
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 import { GalleryService } from './gallery.service';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 
 @Controller('gallery')
 export class GalleryController {
@@ -46,13 +46,25 @@ export class GalleryController {
     return response.status(HttpStatus.OK).json(result);
   }
 
-  @Get('/uploaded/:hashedFilename')
+  @Get('/uploaded')
   async uploadedFile(
-    @Param('hashedFilename') hashedFilename: string,
+    // @Param('hashedFilename') hashedFilename: string,
+    // @Param('mimeType') mimeType: string,
+    // @Param('originalFilename') originalFilename: string,
+    @Query()
+    query: {
+      hashedFilename: string;
+      originalFilename: string;
+      mimeType: string;
+    },
     @Res() response: Response,
   ) {
-    console.log('uploadedFile');
-    const result = await this.galleryService.execUploadedFile(hashedFilename);
+    const { originalFilename, hashedFilename, mimeType } = query;
+    const result = await this.galleryService.execUploadedFile({
+      originalFilename,
+      fileId: hashedFilename,
+      mimeType,
+    });
     return response.status(HttpStatus.OK).json(result);
   }
 

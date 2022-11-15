@@ -2,7 +2,7 @@
 import throng from 'throng';
 import Queue from 'bull';
 // import fs from 'fs';
-import { generateHashedFilename } from './utils.js';
+import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
 // import AWS from 'aws-sdk';
 import S3Service from './s3service.js';
 import Database from './db.js';
@@ -155,12 +155,13 @@ function start(id) {
 
   fileProcQueue.process(async (job, done) => {
     let progress = 0;
-    const { fileId } = job.data;
+    const { fileId, originalFilename, mimeType } = job.data;
 
-    console.log({ fileId });
+    let result = {};
+
+    console.log(fileId, originalFilename, mimeType);
 
     const readStream = s3.getReadableStream('test', fileId);
-
     const pipeline = sharp();
     pipeline
       .resize(200, 200)
@@ -168,8 +169,24 @@ function start(id) {
       .webp({ quality: 80 })
       .toBuffer()
       .then(async (data) => {
-        console.log(data);
-        await s3.uploadFile('test', `thumbnail-${fileId}`, data);
+        const thumbFilename = `${getFilenameAndExtension(fileId).filename}-thumbnail.webp`;
+
+        await s3.uploadFile('test', thumbFilename, data);
+
+        const record = await db.saveFileInfo({
+          id: getFilenameAndExtension(fileId).filename,
+          originalName: originalFilename,
+          mimeType: mimeType,
+          hashedName: fileId,
+          thumbnail: thumbFilename
+        });
+
+        console.log({ record });
+
+        result = {
+          ...record,
+          id: record._id
+        };
       })
       .catch((err) => {
         console.log(err);
@@ -187,9 +204,9 @@ function start(id) {
 
     // job.progress(100);
 
-    // console.log(result);
+    console.log(result);
 
-    done(null, {});
+    done(null, result);
   });
 }
 
