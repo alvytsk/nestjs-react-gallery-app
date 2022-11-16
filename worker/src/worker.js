@@ -16,7 +16,7 @@ let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 // Spin up multiple processes to handle jobs to take advantage of more CPU cores
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
-let workers = process.env.WEB_CONCURRENCY || 1;
+let workers = process.env.WEB_CONCURRENCY || 3;
 
 // console.log({ workers });
 
@@ -143,7 +143,7 @@ function start(id) {
   // Connect to the named work queue
   const fileProcQueue = new Queue('files-processing', REDIS_URL);
 
-  console.log(`Worker ${id} started`);
+  console.log(`Worker ${id}/${workers} started`);
 
   const s3 = new S3Service({
     accessKeyId: process.env.MINIO_ACCESS_KEY,
@@ -154,12 +154,14 @@ function start(id) {
   const db = new Database({ uri: process.env.MONGODB_URI });
 
   fileProcQueue.process(async (job, done) => {
+    console.log(`fileProcQueue started at ${id} worker `);
+
     let progress = 0;
     const { fileId, originalFilename, mimeType } = job.data;
 
     let result = {};
 
-    console.log(fileId, originalFilename, mimeType);
+    // console.log(fileId, originalFilename, mimeType);
 
     const readStream = s3.getReadableStream('test', fileId);
     const pipeline = sharp();
@@ -181,7 +183,7 @@ function start(id) {
           thumbnail: thumbFilename
         });
 
-        console.log({ record });
+        // console.log({ record });
 
         result = {
           ...record,
@@ -204,7 +206,8 @@ function start(id) {
 
     // job.progress(100);
 
-    console.log(result);
+    // console.log(result);
+    console.log(`fileProcQueue finished at ${id} worker `);
 
     done(null, result);
   });

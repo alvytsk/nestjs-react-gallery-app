@@ -48,7 +48,7 @@ const UploadForm = () => {
         <input multiple type="file" ref={inputRef} onChange={onFileChange} />
         <button type="submit">Upload</button>
         {files.length ? <button onClick={onReset}>Reset</button> : null}
-        <FilesList {...files} />
+        {/* <FilesList {...files} /> */}
       </form>
     </div>
   );

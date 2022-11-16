@@ -22,40 +22,30 @@ export const uploadFiles = createAsyncThunk<undefined, File[], { rejectValue: st
 
     try {
       Array.from(files).forEach(async (file) => {
-        let response = await api.get('gallery/getSignedUrl/' + file.name);
+        // console.log(file);
+        api.get('gallery/getSignedUrl/' + file.name).then(async (res) => {
+          // console.log(response.data);
+          const hashedFilename = res.data.hashedFilename;
 
-        console.log(response.data);
-        const hashedFilename = response.data.hashedFilename;
+          const config = {
+            headers: {
+              'Content-Type': 'application/octet-stream'
+            },
+            onUploadProgress
+          };
+          axios.put(res.data.url, file, config).then(async (res) => {
+            // console.log(res);
 
-        // const formData = new FormData();
-        // formData.append('file', file);
-        const config = {
-          headers: {
-            'Content-Type': 'application/octet-stream'
-          },
-          onUploadProgress
-        };
-        const result = await axios.put(response.data.url, file, config);
-
-        console.log(result);
-
-        if (result.status === 200) {
-          response = await api.get('gallery/uploaded/', {
-            params: { hashedFilename, originalFilename: file.name }
+            api
+              .get('gallery/uploaded/', {
+                params: { hashedFilename, originalFilename: file.name, mimeType: file.type }
+              })
+              .then((res) => {
+                console.log(res.data);
+                return res.data;
+              });
           });
-        }
-
-        // const formData = new FormData();
-        // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
-        // const response = await fetch('http://localhost:3001/api/gallery/upload', {
-        //   method: 'POST',
-        //   body: formData
-        // });
-        // return response.json();
-        // return await api.post('http://localhost:3001/api/gallery/upload', formData, {
-        //   headers: {
-        //     'Content-type': 'multipart/form-data'
-        //   }
+        });
       });
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
@@ -117,6 +107,7 @@ const gallerySlice = createSlice({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(uploadFiles.fulfilled, (state, action: PayloadAction<any>) => {
       // state.files = [...state.files, ...action.payload];
+      console.log('fulfilled', action.payload);
       state.jobId = action.payload;
     });
 
