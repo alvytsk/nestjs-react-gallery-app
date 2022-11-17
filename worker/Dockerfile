@@ -12,6 +12,8 @@ RUN npm install
 # If you are building your code for production
 # RUN npm ci --only=production
 
+RUN apt update && apt install -y ffmpeg 
+
 # Bundle app source
 COPY . .
 

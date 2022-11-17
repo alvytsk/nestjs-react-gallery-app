@@ -1,12 +1,13 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-// import fs from 'fs';
+import fs from 'fs';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
 // import AWS from 'aws-sdk';
 import S3Service from './s3service.js';
 import Database from './db.js';
 import sharp from 'sharp';
+import ffmpeg from 'fluent-ffmpeg';
 // import mongoose from 'mongoose';
 
 // console.log(process.env);
@@ -59,38 +60,76 @@ function start(id) {
 
     let result = {};
 
-    // console.log(fileId, originalFilename, mimeType);
+    switch (MIME_TYPE_MAP[mimeType].type) {
+      case 'image':
+        {
+          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const pipeline = sharp();
+          pipeline
+            .resize(200, 200)
+            .sharpen()
+            .composite([{ input: './assets/watermark.png', gravity: 'center' }])
+            .webp({ quality: 80 })
+            .toBuffer()
+            .then(async (data) => {
+              const thumbFilename = `${getFilenameAndExtension(fileId).filename}-thumbnail.webp`;
 
-    if (isImage) {
-      const readStream = s3.getReadableStream('test', fileId);
-      const pipeline = sharp();
-      pipeline
-        .resize(200, 200)
-        .sharpen()
-        .webp({ quality: 80 })
-        .toBuffer()
-        .then(async (data) => {
-          const thumbFilename = `${getFilenameAndExtension(fileId).filename}-thumbnail.webp`;
+              await s3.uploadFile({ bucketName: 'test', keyName: thumbFilename, data });
 
-          await s3.uploadFile('test', thumbFilename, data);
+              const record = await db.saveFileInfo({
+                id: getFilenameAndExtension(fileId).filename,
+                originalName: originalFilename,
+                mimeType: mimeType,
+                hashedName: fileId,
+                thumbnail: thumbFilename
+              });
 
-          const record = await db.saveFileInfo({
-            id: getFilenameAndExtension(fileId).filename,
-            originalName: originalFilename,
-            mimeType: mimeType,
-            hashedName: fileId,
-            thumbnail: thumbFilename
-          });
+              result = {
+                ...record,
+                id: record._id
+              };
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+          readStream.pipe(pipeline);
+        }
+        break;
 
-          result = {
-            ...record,
-            id: record._id
-          };
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-      readStream.pipe(pipeline);
+      case 'video':
+        {
+          console.log('video');
+
+          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const writeStream = s3.uploadStream({
+            bucketName: 'test',
+            keyName: 'newfile.mp4'
+          }).writeStream;
+
+          ffmpeg(readStream)
+            .on('end', function () {
+              console.log('file has been converted succesfully');
+            })
+            .on('progress', function (progress) {
+              console.log('Processing: ' + progress.percent + '% done');
+            })
+            .on('error', function (err, stdout, stderr) {
+              console.log('an error happened: ' + err.message);
+              console.log('ffmpeg stdout: ' + stdout);
+              console.log('ffmpeg stderr: ' + stderr);
+            })
+            .on('start', function () {
+              console.log('file starting');
+            })
+            .size('640x480')
+            .duration('0:3')
+            .videoCodec('libx264')
+            .audioCodec('aac')
+            .outputFormat('mp4')
+            .outputOptions(['-movflags frag_keyframe+empty_moov'])
+            .pipe(writeStream, { end: true });
+        }
+        break;
     }
 
     console.log(`fileProcQueue finished at ${id} worker `);

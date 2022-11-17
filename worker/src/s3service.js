@@ -1,5 +1,5 @@
 import AWS from 'aws-sdk';
-import fs from 'fs';
+import stream from 'stream';
 
 export default class S3Service {
   s3;
@@ -22,7 +22,7 @@ export default class S3Service {
     );
   }
 
-  async uploadFile(bucketName, keyName, data) {
+  async uploadFile({ bucketName, keyName, data }) {
     return this.s3
       .upload({
         Bucket: bucketName,
@@ -32,7 +32,7 @@ export default class S3Service {
       .promise();
   }
 
-  getReadableStream(bucketName, keyName) {
+  getReadableStream({ bucketName, keyName }) {
     const params = {
       Bucket: bucketName,
       Key: keyName
@@ -45,5 +45,16 @@ export default class S3Service {
     });
 
     return readStream;
+  }
+
+  uploadStream({ bucketName, keyName }) {
+    const pass = new stream.PassThrough();
+
+    const params = { Bucket: bucketName, Key: keyName, Body: pass };
+
+    return {
+      writeStream: pass,
+      promise: this.s3.upload(params).promise()
+    };
   }
 }
