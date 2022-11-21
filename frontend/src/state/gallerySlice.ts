@@ -85,7 +85,7 @@ export const uploadFile = createAsyncThunk<
 >('gallery/uploadFile', async ({ file, url }, thunkApi) => {
   const onUploadProgress = (event) => {
     const percentage = Math.round((100 * event.loaded) / event.total);
-    console.log(`${percentage}%`);
+    // console.log(`${percentage}%`);
     thunkApi.dispatch(setUploadingProgress({ id: file.name, progress: percentage }));
   };
 
@@ -102,6 +102,27 @@ export const uploadFile = createAsyncThunk<
     return thunkApi.rejectWithValue('Error');
   }
 });
+
+export const uploadFileCompleted = createAsyncThunk<
+  { jobId: number },
+  { hashedFilename: string; originalFilename: string; mimeType: string },
+  { rejectValue: string }
+>(
+  'gallery/uploadFileCompleted',
+  async ({ hashedFilename, originalFilename, mimeType }, thunkApi) => {
+    try {
+      const response = await api.get('gallery/uploaded/', {
+        params: { hashedFilename, originalFilename, mimeType }
+      });
+
+      return {
+        jobId: response.data.jobId
+      };
+    } catch (err) {
+      return thunkApi.rejectWithValue('Error');
+    }
+  }
+);
 
 export const getFiles = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
   'gallery/getAllFiles',
@@ -180,7 +201,7 @@ const gallerySlice = createSlice({
     });
 
     builder.addCase(getUploadFileUrl.fulfilled, (state, action) => {
-      console.log('getUploadFileUrl', action.payload);
+      // console.log('getUploadFileUrl', action.payload);
       const index = state.uploading.findIndex((el) => el.name === action.payload.name);
 
       if (index === -1) {
@@ -189,7 +210,11 @@ const gallerySlice = createSlice({
     });
 
     builder.addCase(uploadFile.fulfilled, (state, action) => {
-      console.log('uploadFile', action.payload);
+      // console.log('uploadFile', action.payload);
+    });
+
+    builder.addCase(uploadFileCompleted.fulfilled, (state, action) => {
+      // console.log('uploadFileCompleted', action.payload);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

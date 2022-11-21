@@ -1,7 +1,12 @@
 import { PayloadAction } from '@reduxjs/toolkit';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '~/hooks/state';
-import { getUploadFileUrl, resetUploadingFiles, uploadFile } from '~/state/gallerySlice';
+import {
+  getUploadFileUrl,
+  resetUploadingFiles,
+  uploadFile,
+  uploadFileCompleted
+} from '~/state/gallerySlice';
 import { UploadUrlDTO } from '~/types/gallery';
 import FilesList from './FilesList';
 
@@ -34,7 +39,16 @@ const UploadForm = () => {
         if (urlResponse.payload && typeof urlResponse.payload !== 'string') {
           const url = urlResponse.payload.url;
           const uploadResponse = await dispatch(uploadFile({ file, url }));
-          // console.log(uploadResponse);
+
+          // if (uploadResponse.payload && typeof uploadResponse.payload !== 'string') {
+          const result = await dispatch(
+            uploadFileCompleted({
+              hashedFilename: urlResponse.payload.hashedFilename,
+              originalFilename: file.name,
+              mimeType: file.type
+            })
+          );
+          // }
         }
       });
     }
