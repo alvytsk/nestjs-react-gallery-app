@@ -1,13 +1,13 @@
-import React from 'react';
-import { useAppDispatch } from '~/hooks/state';
-import { deleteImage } from '~/state/gallerySlice';
+import React, { useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '~/hooks/state';
+import { deleteFile, getUploadingStatus } from '~/state/gallerySlice';
 import { GalleryItemDTO } from '~/types/gallery';
 
 const GalleryItem: React.FC<{ file: GalleryItemDTO }> = ({ file }) => {
   const dispatch = useAppDispatch();
 
   const onDelete = () => {
-    dispatch(deleteImage(file.id));
+    dispatch(deleteFile(file.id));
   };
 
   return (

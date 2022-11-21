@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import GalleryItem from './GalleryItem';
 import { useAppDispatch, useAppSelector } from '~/hooks/state';
-import { getImages } from '~/state/gallerySlice';
+import { getFiles } from '~/state/gallerySlice';
 import './gallery.scss';
 
 const Gallery = () => {
@@ -9,7 +9,7 @@ const Gallery = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(getImages());
+    dispatch(getFiles());
 
     return;
   }, [dispatch]);

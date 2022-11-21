@@ -4,12 +4,7 @@
 # BUILD FOR LOCAL DEVELOPMENT
 ###################
 
-FROM node:18-alpine AS development
-
-# RUN apk update && apk add --no-cache vips vips-dev libc-dev libc6-compat
-# RUN apk add --no-cache ffmpeg
-
-RUN apk upgrade -U && apk add --no-cache ffmpeg
+FROM node:lts-bullseye-slim AS development
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -29,7 +24,7 @@ USER node
 # BUILD FOR PRODUCTION
 ###################
 
-FROM node:18-alpine AS build
+FROM node:lts-bullseye-slim AS build
 
 WORKDIR /usr/src/app
 COPY --chown=node:node package*.json ./
@@ -53,13 +48,11 @@ USER node
 # PRODUCTION
 ###################
 
-FROM node:18-alpine AS production
+FROM node:lts-bullseye-slim AS production
 
 # Copy the bundled code from the build stage to the production image
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-
-RUN apk upgrade -U && apk add --no-cache ffmpeg
 
 RUN	su node \
   && npm install sharp --g --production --unsafe-perm \

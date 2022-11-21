@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Res,
   Param,
   UseInterceptors,
@@ -12,6 +13,7 @@ import {
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
 import { GalleryService } from './gallery.service';
+import { Response, Request } from 'express';
 
 @Controller('gallery')
 export class GalleryController {
@@ -34,10 +36,43 @@ export class GalleryController {
     });
   }
 
+  @Get('/getSignedUrl/:filename')
+  async getSignedUrl(
+    @Param('filename') filename: string,
+    @Res() response: Response,
+  ) {
+    const result = await this.galleryService.generateUrlForUpload(filename);
+
+    return response.status(HttpStatus.OK).json(result);
+  }
+
+  @Get('/uploaded')
+  async uploadedFile(
+    // @Param('hashedFilename') hashedFilename: string,
+    // @Param('mimeType') mimeType: string,
+    // @Param('originalFilename') originalFilename: string,
+    @Query()
+    query: {
+      hashedFilename: string;
+      originalFilename: string;
+      mimeType: string;
+    },
+    @Res() response: Response,
+  ) {
+    const { originalFilename, hashedFilename, mimeType } = query;
+    const result = await this.galleryService.execUploadedFile({
+      originalFilename,
+      fileId: hashedFilename,
+      mimeType,
+    });
+    return response.status(HttpStatus.OK).json(result);
+  }
+
   @Post('/upload')
   @UseInterceptors(AnyFilesInterceptor())
   async uploadFiles(@UploadedFiles() files: Array<UploadedDto>) {
-    const result = await this.galleryService.uploadFiles(files);
+    // const result = await this.galleryService.uploadFiles(files);
+    const result = await this.galleryService.testQueue(files);
     return result;
   }
 
@@ -52,5 +87,24 @@ export class GalleryController {
   async dowloadFile(@Param('id') fileId: string, @Res() res: Response) {
     // const result = await this.service.uploadFile(files);
     // return result;
+  }
+
+  // @Get('test')
+  // async createQueue() {
+  //   const result = await this.galleryService.testQueue();
+  //   return {
+  //     jobId: result,
+  //   };
+  // }
+
+  @Get('test/:id')
+  async getJobResult(@Res() response: Response, @Param('id') id: string) {
+    const result = await this.galleryService.getQueueStatus(id);
+
+    // if (!result) {
+    //   return response.sendStatus(HttpStatus.NOT_FOUND);
+    // }
+
+    return response.status(HttpStatus.OK).json(result);
   }
 }

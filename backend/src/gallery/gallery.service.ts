@@ -16,17 +16,20 @@ import sharp from 'sharp';
 import { UploadedFile, UploadedFileDocument } from './schemas/file.schema';
 import { CloudService } from '../cloud/cloud.service';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
-import { StorageFile } from 'src/cloud/dto/download.dto';
-import { fileValidationMessageList } from 'aws-sdk/clients/frauddetector';
+import Queue from 'bull';
 
 @Injectable()
 export class GalleryService {
+  private filesProcQueue: Queue.Queue<any>;
+
   constructor(
     private configService: ConfigService,
     private cloudService: CloudService,
     @InjectModel(UploadedFile.name)
     private uploadedFileModel: Model<UploadedFileDocument>,
-  ) {}
+  ) {
+    this.filesProcQueue = new Queue('files-processing', 'redis://redis:6379');
+  }
 
   private generateHashedFilename(originalFilename: string): {
     filename: string;
@@ -137,14 +140,14 @@ export class GalleryService {
       thumbFile.hashedname,
     );
 
-    console.log({ record });
+    // console.log({ record });
 
     result = {
       ...result,
       id: record._id,
     };
 
-    console.log({ result });
+    // console.log({ result });
 
     return result;
   }
@@ -215,5 +218,85 @@ export class GalleryService {
     } catch (error) {
       throw new ConflictException(error.keyValue);
     }
+  }
+
+  async execUploadedFile(data: {
+    fileId: string;
+    originalFilename: string;
+    mimeType: string;
+  }) {
+    console.log({ data });
+
+    const job = await this.filesProcQueue.add(data);
+
+    console.log(`Job ${job.id} created`);
+
+    return {
+      jobId: job.id,
+    };
+  }
+
+  async testQueue(files: Array<UploadedDto>) {
+    const job = await this.filesProcQueue.add({ files });
+
+    console.log(`Job ${job.id} created`);
+
+    return job.id;
+  }
+
+  async getQueueStatus(id: string | number) {
+    const job = await this.filesProcQueue.getJob(id);
+
+    if (!job) {
+      return;
+    }
+
+    let progress = await job.progress();
+    let data = [];
+    let result;
+
+    const jobState = await job.getState();
+
+    if (jobState === 'completed') {
+      progress = 100;
+
+      data = await job.finished();
+
+      result = await Promise.all(
+        data.map(async (file) => {
+          const url = await this.cloudService.generatePresignedUrl(
+            file.thumbFile,
+          );
+
+          return {
+            ...file,
+            url: url,
+          };
+        }),
+      );
+
+      // data.forEach(async function (file) {
+      //   file.url = await this.cloudService.generatePresignedUrl(file.thumbFile);
+      // });
+
+      console.log(result);
+
+      // data.job.remove();
+    }
+
+    return { progress, files: result };
+  }
+
+  async generateUrlForUpload(filename) {
+    const hashedFilename = this.generateHashedFilename(filename);
+    const url = await this.cloudService.generatePresignedUrl(
+      hashedFilename.filename + hashedFilename.extension,
+      'putObject',
+    );
+
+    return {
+      url,
+      hashedFilename: hashedFilename.filename + hashedFilename.extension,
+    };
   }
 }

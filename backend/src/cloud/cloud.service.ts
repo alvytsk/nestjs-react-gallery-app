@@ -28,14 +28,18 @@ export class CloudService {
       .promise();
   }
 
-  generatePresignedUrl(key: string, expireTimeInSec = 15 * 60) {
+  generatePresignedUrl(
+    key: string,
+    method = 'getObject',
+    expireTimeInSec = 15 * 60,
+  ) {
     const params = {
       Bucket: 'test',
       Key: key,
       Expires: expireTimeInSec,
     };
 
-    return this.s3.getSignedUrlPromise('getObject', params);
+    return this.s3.getSignedUrlPromise(method, params);
   }
 
   async deleteFile(key: string) {
