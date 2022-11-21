@@ -25,6 +25,7 @@ const MIME_TYPE_MAP = {
   'image/jpg': { extension: 'jpg', type: 'image' },
   'image/gif': { extension: 'gif', type: 'image' },
   'image/webp': { extension: 'webp', type: 'image' },
+  'image/heif': { extension: 'heic', type: 'image' },
   'video/mp4': { extension: 'mp4', type: 'video' }
 };
 
@@ -103,26 +104,35 @@ function start(id) {
           const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
           const writeStream = s3.uploadStream({
             bucketName: 'test',
-            keyName: 'newfile.mp4'
+            keyName: getFilenameAndExtension(fileId).filename + '-sm.mp4'
           }).writeStream;
 
           ffmpeg(readStream)
-            .on('end', function () {
-              console.log('file has been converted succesfully');
+            .on('end', () => {
+              console.log('<<<<< file has been converted succesfully');
+              readStream.unpipe(writeStream);
+              readStream.destroy();
+              writeStream.destroy();
             })
-            .on('progress', function (progress) {
-              console.log('Processing: ' + progress.percent + '% done');
+            .on('progress', (progress) => {
+              console.log({ progress });
+              // console.log('Processing: ' + progress.percent + '% done');
             })
-            .on('error', function (err, stdout, stderr) {
+            .on('error', (err, stdout, stderr) => {
               console.log('an error happened: ' + err.message);
               console.log('ffmpeg stdout: ' + stdout);
               console.log('ffmpeg stderr: ' + stderr);
+              readStream.unpipe(writeStream);
+              readStream.destroy();
+              writeStream.destroy();
             })
-            .on('start', function () {
-              console.log('file starting');
+            .on('start', () => {
+              console.log('>>>> file starting');
             })
-            .size('640x480')
+            // .size('640x480')
             .duration('0:3')
+            .input('./assets/watermark.png')
+            .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
             .videoCodec('libx264')
             .audioCodec('aac')
             .outputFormat('mp4')
