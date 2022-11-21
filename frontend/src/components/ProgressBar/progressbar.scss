@@ -1,0 +1,25 @@
+.progressbar-container {
+    position: relative;
+    width: 100px;
+    height: 20px;
+    border: 1px solid #FFF;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: white;
+
+    .progressbar-complete {
+        position: absolute;
+        left: 0;
+        top: 0px;
+        height: 100%;
+        background-color: #1d9927;
+        z-index: 2;
+    }
+
+    .progress {
+        z-index: 2;
+    }
+}
