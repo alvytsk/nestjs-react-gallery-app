@@ -170,7 +170,8 @@ export class GalleryService {
           hashedname: file.hashedName,
           url: url,
           type: file.mimeType,
-          id: file._id,
+          id: file.id,
+          _id: file._id,
         };
       }),
     );
@@ -252,39 +253,31 @@ export class GalleryService {
     }
 
     let progress = await job.progress();
-    let data = [];
-    let result;
+    let data = {};
+    // let result;
 
     const jobState = await job.getState();
+
+    console.log({ jobState });
 
     if (jobState === 'completed') {
       progress = 100;
 
-      data = await job.finished();
+      const jobResponse = await job.finished();
 
-      result = await Promise.all(
-        data.map(async (file) => {
-          const url = await this.cloudService.generatePresignedUrl(
-            file.thumbFile,
-          );
+      console.log({ jobResponse });
 
-          return {
-            ...file,
-            url: url,
-          };
-        }),
-      );
+      data = {
+        ...jobResponse,
+        url: await this.cloudService.generatePresignedUrl(
+          jobResponse.thumbnail,
+        ),
+      };
 
-      // data.forEach(async function (file) {
-      //   file.url = await this.cloudService.generatePresignedUrl(file.thumbFile);
-      // });
-
-      console.log(result);
-
-      // data.job.remove();
+      job.remove();
     }
 
-    return { progress, files: result };
+    return { progress, data };
   }
 
   async generateUrlForUpload(filename) {

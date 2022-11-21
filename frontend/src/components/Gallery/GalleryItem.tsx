@@ -7,7 +7,7 @@ const GalleryItem: React.FC<{ file: GalleryItemDTO }> = ({ file }) => {
   const dispatch = useAppDispatch();
 
   const onDelete = () => {
-    dispatch(deleteFile(file.id));
+    dispatch(deleteFile(file._id));
   };
 
   return (

@@ -5,7 +5,8 @@ import {
   getUploadFileUrl,
   resetUploadingFiles,
   uploadFile,
-  uploadFileCompleted
+  uploadFileCompleted,
+  getUploadingStatus
 } from '~/state/gallerySlice';
 import { UploadUrlDTO } from '~/types/gallery';
 import FilesList from './FilesList';
@@ -16,17 +17,26 @@ const UploadForm = () => {
   const uploading = useAppSelector((state) => state.gallery.uploading);
   const dispatch = useAppDispatch();
 
-  // useEffect(() => {
-  //   const pollHandler = setInterval(() => {
-  //     jobId && dispatch(getUploadingStatus(jobId));
-  //   }, 100);
+  useEffect(() => {
+    let pollHandler;
 
-  //   if (!jobId && pollHandler) {
-  //     clearInterval(pollHandler);
-  //   }
+    if (uploading.length) {
+      uploading.every((item) => {
+        if (item.jobId) {
+          pollHandler = setInterval(() => {
+            item.jobId && dispatch(getUploadingStatus(item.jobId));
+          }, 100);
+          return false;
+        }
+      });
+    } else {
+      setTimeout(() => {
+        setFiles([]);
+      }, 1000);
+    }
 
-  //   return () => clearInterval(pollHandler);
-  // }, [dispatch, jobId]);
+    return () => clearInterval(pollHandler);
+  }, [uploading, dispatch]);
 
   const onUpload = (event) => {
     event.preventDefault();

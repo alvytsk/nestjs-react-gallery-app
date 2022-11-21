@@ -28,8 +28,8 @@ export default class Database {
       });
   }
 
-  saveFileInfo(data) {
+  async saveFileInfo(data) {
     const uploadFileModelInstance = new this.uploadedFileModel(data);
-    return uploadFileModelInstance.save();
+    return await uploadFileModelInstance.save();
   }
 }

@@ -85,13 +85,13 @@ function start(id) {
                 thumbnail: thumbFilename
               });
 
-              result = {
-                ...record,
-                id: record._id
-              };
+              done(null, record);
             })
             .catch((err) => {
               console.log(err);
+              done(null, {
+                err: err.message
+              });
             });
           readStream.pipe(pipeline);
         }
@@ -113,6 +113,7 @@ function start(id) {
               readStream.unpipe(writeStream);
               readStream.destroy();
               writeStream.destroy();
+              done(null, result);
             })
             .on('progress', (progress) => {
               console.log({ progress });
@@ -125,6 +126,7 @@ function start(id) {
               readStream.unpipe(writeStream);
               readStream.destroy();
               writeStream.destroy();
+              done(null, result);
             })
             .on('start', () => {
               console.log('>>>> file starting');
@@ -142,9 +144,9 @@ function start(id) {
         break;
     }
 
-    console.log(`fileProcQueue finished at ${id} worker `);
+    // console.log(`fileProcQueue finished at ${id} worker `);
 
-    done(null, result);
+    // done(null, { test: '222' });
   });
 }
 
