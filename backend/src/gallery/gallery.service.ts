@@ -169,7 +169,7 @@ export class GalleryService {
           name: file.originalName,
           hashedname: file.hashedName,
           url: url,
-          type: file.mimeType,
+          type: file.type,
           id: file.id,
           _id: file._id,
         };
@@ -204,7 +204,7 @@ export class GalleryService {
     const imageData = {
       id,
       originalName: original,
-      mimeType: mimeType,
+      type: mimeType,
       hashedName: hashedFilename,
       thumbnail: thumbnailFilename,
     };
@@ -224,7 +224,7 @@ export class GalleryService {
   async execUploadedFile(data: {
     fileId: string;
     originalFilename: string;
-    mimeType: string;
+    type: string;
   }) {
     console.log({ data });
 
@@ -274,7 +274,7 @@ export class GalleryService {
         ),
       };
 
-      job.remove();
+      // job.remove();
     }
 
     return { progress, data };

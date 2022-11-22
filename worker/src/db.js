@@ -9,7 +9,7 @@ export default class Database {
     const uploadedFileSchema = new mongoose.Schema({
       id: String,
       originalName: String,
-      mimeType: String,
+      type: String,
       hashedName: String,
       thumbnail: String
     });

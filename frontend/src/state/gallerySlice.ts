@@ -62,25 +62,22 @@ export const uploadFile = createAsyncThunk<
 
 export const uploadFileCompleted = createAsyncThunk<
   { filename: string; jobId: number },
-  { hashedFilename: string; originalFilename: string; mimeType: string },
+  { hashedFilename: string; originalFilename: string; type: string },
   { rejectValue: string }
->(
-  'gallery/uploadFileCompleted',
-  async ({ hashedFilename, originalFilename, mimeType }, thunkApi) => {
-    try {
-      const response = await api.get('gallery/uploaded/', {
-        params: { hashedFilename, originalFilename, mimeType }
-      });
+>('gallery/uploadFileCompleted', async ({ hashedFilename, originalFilename, type }, thunkApi) => {
+  try {
+    const response = await api.get('gallery/uploaded/', {
+      params: { hashedFilename, originalFilename, type }
+    });
 
-      return {
-        filename: originalFilename,
-        jobId: response.data.jobId
-      };
-    } catch (err) {
-      return thunkApi.rejectWithValue('Error');
-    }
+    return {
+      filename: originalFilename,
+      jobId: response.data.jobId
+    };
+  } catch (err) {
+    return thunkApi.rejectWithValue('Error');
   }
-);
+});
 
 export const getFiles = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
   'gallery/getAllFiles',

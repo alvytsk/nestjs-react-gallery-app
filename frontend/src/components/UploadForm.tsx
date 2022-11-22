@@ -25,7 +25,7 @@ const UploadForm = () => {
         if (item.jobId) {
           pollHandler = setInterval(() => {
             item.jobId && dispatch(getUploadingStatus(item.jobId));
-          }, 100);
+          }, 1000);
           return false;
         }
       });
@@ -55,7 +55,7 @@ const UploadForm = () => {
             uploadFileCompleted({
               hashedFilename: urlResponse.payload.hashedFilename,
               originalFilename: file.name,
-              mimeType: file.type
+              type: file.type
             })
           );
           // }
