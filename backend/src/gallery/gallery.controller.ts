@@ -55,15 +55,15 @@ export class GalleryController {
     query: {
       hashedFilename: string;
       originalFilename: string;
-      mimeType: string;
+      type: string;
     },
     @Res() response: Response,
   ) {
-    const { originalFilename, hashedFilename, mimeType } = query;
+    const { originalFilename, hashedFilename, type } = query;
     const result = await this.galleryService.execUploadedFile({
       originalFilename,
       fileId: hashedFilename,
-      mimeType,
+      type,
     });
     return response.status(HttpStatus.OK).json(result);
   }

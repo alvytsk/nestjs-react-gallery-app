@@ -34,7 +34,7 @@ export class UploadedFile {
   originalName: string;
 
   @Prop({ required: true })
-  mimeType: string;
+  type: string;
 
   @Prop({ required: true })
   hashedName: string;

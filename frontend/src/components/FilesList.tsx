@@ -7,14 +7,11 @@ const FilesList = (props: { files: File[]; uploading: UploadingItemDTO[] }) => {
   const [uploadInfo, setUploadInfo] = useState<UploadingItemDTO[]>([]);
 
   useEffect(() => {
-    // console.log(files);
-
-    props.files && setInfos(Object.values(props.files));
+    props.files.length ? setInfos(Object.values(props.files)) : setInfos([]);
   }, [props.files]);
 
   useEffect(() => {
-    // console.log(files);
-    props.uploading && setUploadInfo(Object.values(props.uploading));
+    props.uploading.length ? setUploadInfo(Object.values(props.uploading)) : setUploadInfo([]);
   }, [props.uploading]);
 
   function formatBytes(bytes, decimals = 2) {

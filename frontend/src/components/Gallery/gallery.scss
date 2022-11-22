@@ -13,7 +13,7 @@
         /* The overlay effect - lays on top of the container and over the image */
         & .item__overlay {
             position: absolute;
-            bottom: 0;
+            top: 0;
             background: rgba(0, 0, 0, 0.5); /* Black see-through */
             color: #f1f1f1;
             width: 100%;
@@ -40,6 +40,15 @@
         }
 
         img {
+            flex-basis: 25%;
+            flex-grow: 0;
+            flex-shrink: 0;
+            object-fit: cover;
+            vertical-align: middle;
+            box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+        }
+
+        video {
             flex-basis: 25%;
             flex-grow: 0;
             flex-shrink: 0;

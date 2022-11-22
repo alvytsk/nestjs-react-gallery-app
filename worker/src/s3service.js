@@ -41,7 +41,8 @@ export default class S3Service {
     const readStream = this.s3.getObject(params).createReadStream();
 
     readStream.on('error', (e) => {
-      console.error(e);
+      console.error(e.message);
+      return { error: e.message };
     });
 
     return readStream;

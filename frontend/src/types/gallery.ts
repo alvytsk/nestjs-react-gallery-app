@@ -3,6 +3,7 @@ export type GalleryItemDTO = {
   name: string;
   type: string;
   url: string;
+  _id: string;
 };
 
 export type UploadingStatus = 'idle' | 'uploading' | 'thumbnail' | 'done';
@@ -13,6 +14,7 @@ export type UploadingItemDTO = {
   progress: number;
   hashedFilename: string;
   url: string;
+  jobId: number | null;
 };
 
 export type UploadUrlDTO = {

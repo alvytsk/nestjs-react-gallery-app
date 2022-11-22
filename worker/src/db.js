@@ -9,7 +9,7 @@ export default class Database {
     const uploadedFileSchema = new mongoose.Schema({
       id: String,
       originalName: String,
-      mimeType: String,
+      type: String,
       hashedName: String,
       thumbnail: String
     });
@@ -28,8 +28,8 @@ export default class Database {
       });
   }
 
-  saveFileInfo(data) {
+  async saveFileInfo(data) {
     const uploadFileModelInstance = new this.uploadedFileModel(data);
-    return uploadFileModelInstance.save();
+    return await uploadFileModelInstance.save();
   }
 }

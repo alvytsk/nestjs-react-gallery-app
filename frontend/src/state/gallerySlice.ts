@@ -6,7 +6,6 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 
 interface GalleryState {
   count: number;
-  jobId: string | number;
   uploading: UploadingItemDTO[];
   files: GalleryItemDTO[];
 }
@@ -14,50 +13,8 @@ interface GalleryState {
 const initialState: GalleryState = {
   count: 0,
   uploading: [],
-  files: [],
-  jobId: 0
+  files: []
 };
-
-// export const uploadFiles = createAsyncThunk<undefined, File[], { rejectValue: string }>(
-//   'gallery/uploadFiles',
-//   async (files, thunkApi) => {
-//     const onUploadProgress = (event) => {
-//       const percentage = Math.round((100 * event.loaded) / event.total);
-//       console.log(`${percentage}%`);
-//     };
-
-//     try {
-//       Array.from(files).forEach(async (file) => {
-//         // console.log(file);
-//         api.get('gallery/getSignedUrl/' + file.name).then(async (res) => {
-//           // console.log(response.data);
-//           const hashedFilename = res.data.hashedFilename;
-
-//           const config = {
-//             headers: {
-//               'Content-Type': 'application/octet-stream'
-//             },
-//             onUploadProgress
-//           };
-//           axios.put(res.data.url, file, config).then(async (res) => {
-//             // console.log(res);
-
-//             api
-//               .get('gallery/uploaded/', {
-//                 params: { hashedFilename, originalFilename: file.name, mimeType: file.type }
-//               })
-//               .then((res) => {
-//                 console.log(res.data);
-//                 return res.data;
-//               });
-//           });
-//         });
-//       });
-//     } catch (err) {
-//       return thunkApi.rejectWithValue('Error');
-//     }
-//   }
-// );
 
 export const getUploadFileUrl = createAsyncThunk<UploadingItemDTO, File, { rejectValue: string }>(
   'gallery/getUploadFileUrl',
@@ -70,7 +27,8 @@ export const getUploadFileUrl = createAsyncThunk<UploadingItemDTO, File, { rejec
       url: response.data.url,
       name: file.name,
       hashedFilename: response.data.hashedFilename,
-      progress: 0
+      progress: 0,
+      jobId: null
     };
 
     return result;
@@ -85,7 +43,6 @@ export const uploadFile = createAsyncThunk<
 >('gallery/uploadFile', async ({ file, url }, thunkApi) => {
   const onUploadProgress = (event) => {
     const percentage = Math.round((100 * event.loaded) / event.total);
-    // console.log(`${percentage}%`);
     thunkApi.dispatch(setUploadingProgress({ id: file.name, progress: percentage }));
   };
 
@@ -104,35 +61,30 @@ export const uploadFile = createAsyncThunk<
 });
 
 export const uploadFileCompleted = createAsyncThunk<
-  { jobId: number },
-  { hashedFilename: string; originalFilename: string; mimeType: string },
+  { filename: string; jobId: number },
+  { hashedFilename: string; originalFilename: string; type: string },
   { rejectValue: string }
->(
-  'gallery/uploadFileCompleted',
-  async ({ hashedFilename, originalFilename, mimeType }, thunkApi) => {
-    try {
-      const response = await api.get('gallery/uploaded/', {
-        params: { hashedFilename, originalFilename, mimeType }
-      });
+>('gallery/uploadFileCompleted', async ({ hashedFilename, originalFilename, type }, thunkApi) => {
+  try {
+    const response = await api.get('gallery/uploaded/', {
+      params: { hashedFilename, originalFilename, type }
+    });
 
-      return {
-        jobId: response.data.jobId
-      };
-    } catch (err) {
-      return thunkApi.rejectWithValue('Error');
-    }
+    return {
+      filename: originalFilename,
+      jobId: response.data.jobId
+    };
+  } catch (err) {
+    return thunkApi.rejectWithValue('Error');
   }
-);
+});
 
 export const getFiles = createAsyncThunk<undefined, undefined, { rejectValue: string }>(
   'gallery/getAllFiles',
   async (_, thunkApi) => {
     try {
-      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
       const response = await fetch('http://localhost:3001/api/gallery/getAll');
       return await response.json();
-
-      // return api.get('gallery/getAll');
     } catch (err) {
       return thunkApi.rejectWithValue('Error');
     }
@@ -154,19 +106,18 @@ export const deleteFile = createAsyncThunk<undefined, string, { rejectValue: str
   }
 );
 
-export const getUploadingStatus = createAsyncThunk<
-  undefined,
-  string | number,
-  { rejectValue: string }
->('gallery/getUploadingStatus', async (jobId, thunkApi) => {
-  try {
-    // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
-    const response = await fetch('http://localhost:3001/api/gallery/test/' + jobId);
-    return await response.json();
-  } catch (err) {
-    return thunkApi.rejectWithValue('Error');
+export const getUploadingStatus = createAsyncThunk<undefined, number, { rejectValue: string }>(
+  'gallery/getUploadingStatus',
+  async (jobId, thunkApi) => {
+    try {
+      // const response = await fetch('https://nestjs-gallery.herokuapp.com/api/user/upload', {
+      const response = await fetch('http://localhost:3001/api/gallery/test/' + jobId);
+      return await response.json();
+    } catch (err) {
+      return thunkApi.rejectWithValue('Error');
+    }
   }
-});
+);
 
 const gallerySlice = createSlice({
   name: 'gallery',
@@ -179,29 +130,24 @@ const gallerySlice = createSlice({
         state.uploading[index].progress = action.payload.progress;
       }
     },
+    deleteFromUploading(state, action: PayloadAction<{ id: string }>) {
+      const index = state.uploading.findIndex((el) => el.name === action.payload.id);
+
+      if (index !== -1) {
+        state.uploading.splice(index, 1);
+      }
+    },
     resetUploadingFiles(state) {
       state.uploading = [];
     }
   },
   extraReducers: (builder) => {
-    // builder.addCase(uploadImage.pending, (state) => {});
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // builder.addCase(uploadFiles.fulfilled, (state, action: PayloadAction<any>) => {
-    //   // state.files = [...state.files, ...action.payload];
-    //   console.log('fulfilled', action.payload);
-    //   state.jobId = action.payload;
-    // });
-
-    // builder.addCase(uploadImage.rejected, (state, { payload }) => {});
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(getFiles.fulfilled, (state, action: PayloadAction<any>) => {
       state.files = action.payload.data;
     });
 
     builder.addCase(getUploadFileUrl.fulfilled, (state, action) => {
-      // console.log('getUploadFileUrl', action.payload);
       const index = state.uploading.findIndex((el) => el.name === action.payload.name);
 
       if (index === -1) {
@@ -214,21 +160,33 @@ const gallerySlice = createSlice({
     });
 
     builder.addCase(uploadFileCompleted.fulfilled, (state, action) => {
+      const index = state.uploading.findIndex((el) => el.name === action.payload.filename);
+
+      if (index !== -1) {
+        state.uploading[index].status = 'thumbnail';
+        state.uploading[index].jobId = action.payload.jobId;
+      }
       // console.log('uploadFileCompleted', action.payload);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(deleteFile.fulfilled, (state, action: PayloadAction<any>) => {
-      state.files = state.files.filter((obj) => obj.id !== action.payload.id);
+      state.files = state.files.filter((obj) => obj._id !== action.payload.id);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     builder.addCase(getUploadingStatus.fulfilled, (state, action: PayloadAction<any>) => {
-      const { progress } = action.payload;
+      const { progress, data } = action.payload;
 
-      if (Number(progress) === 100) {
-        state.jobId = 0;
-        state.files = [...state.files, ...action.payload.files];
+      console.log(action.payload);
+
+      if (+progress === 100) {
+        const index = state.uploading.findIndex((el) => el.name === data.originalName);
+        if (index !== -1) {
+          state.uploading.splice(index, 1);
+        }
+
+        state.files.push(data);
       }
     });
   }
@@ -236,5 +194,4 @@ const gallerySlice = createSlice({
 
 export const { setUploadingProgress, resetUploadingFiles } = gallerySlice.actions;
 
-// export const {} = counterSlice.actions;
 export default gallerySlice.reducer;

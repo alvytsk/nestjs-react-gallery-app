@@ -1,7 +1,7 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-import fs from 'fs';
+import fs, { read } from 'fs';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
 // import AWS from 'aws-sdk';
 import S3Service from './s3service.js';
@@ -17,7 +17,7 @@ let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 // Spin up multiple processes to handle jobs to take advantage of more CPU cores
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
-let workers = process.env.WEB_CONCURRENCY || 3;
+let workers = process.env.WEB_CONCURRENCY || 1;
 
 const MIME_TYPE_MAP = {
   'image/png': { extension: 'png', type: 'image' },
@@ -47,24 +47,33 @@ function start(id) {
     console.log(`fileProcQueue started at ${id} worker `);
 
     let progress = 0;
-    const { fileId, originalFilename, mimeType } = job.data;
+    const { fileId, originalFilename, type } = job.data;
+
+    console.log(fileId, originalFilename, type);
 
     //Check mimetype and return error if we can handle it
-    if (!MIME_TYPE_MAP[mimeType]) {
+    if (!MIME_TYPE_MAP[type]) {
       console.error('File type is not supported');
       done(null, { error: 'File type is not supported' });
       return;
     }
 
-    const isImage = MIME_TYPE_MAP[mimeType].type === 'image';
-    console.log({ isImage });
+    // const isImage = MIME_TYPE_MAP[mimeType].type === 'image';
+    // console.log({ isImage });
 
     let result = {};
 
-    switch (MIME_TYPE_MAP[mimeType].type) {
+    switch (MIME_TYPE_MAP[type].type) {
       case 'image':
         {
           const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+
+          if ('error' in readStream) {
+            done(null, {
+              error: readStream.error
+            });
+          }
+
           const pipeline = sharp();
           pipeline
             .resize(200, 200)
@@ -80,18 +89,18 @@ function start(id) {
               const record = await db.saveFileInfo({
                 id: getFilenameAndExtension(fileId).filename,
                 originalName: originalFilename,
-                mimeType: mimeType,
+                type,
                 hashedName: fileId,
                 thumbnail: thumbFilename
               });
 
-              result = {
-                ...record,
-                id: record._id
-              };
+              done(null, record);
             })
             .catch((err) => {
               console.log(err);
+              done(null, {
+                error: err.message
+              });
             });
           readStream.pipe(pipeline);
         }
@@ -101,18 +110,30 @@ function start(id) {
         {
           console.log('video');
 
+          const thumbnail = getFilenameAndExtension(fileId).filename + '-sm.mp4';
+
           const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
           const writeStream = s3.uploadStream({
             bucketName: 'test',
-            keyName: getFilenameAndExtension(fileId).filename + '-sm.mp4'
+            keyName: thumbnail
           }).writeStream;
 
           ffmpeg(readStream)
-            .on('end', () => {
+            .on('end', async () => {
               console.log('<<<<< file has been converted succesfully');
               readStream.unpipe(writeStream);
               readStream.destroy();
               writeStream.destroy();
+
+              const record = await db.saveFileInfo({
+                id: getFilenameAndExtension(fileId).filename,
+                originalName: originalFilename,
+                type,
+                hashedName: fileId,
+                thumbnail: thumbnail
+              });
+
+              done(null, record);
             })
             .on('progress', (progress) => {
               console.log({ progress });
@@ -125,6 +146,8 @@ function start(id) {
               readStream.unpipe(writeStream);
               readStream.destroy();
               writeStream.destroy();
+
+              done(null, result);
             })
             .on('start', () => {
               console.log('>>>> file starting');
@@ -141,10 +164,6 @@ function start(id) {
         }
         break;
     }
-
-    console.log(`fileProcQueue finished at ${id} worker `);
-
-    done(null, result);
   });
 }
 
