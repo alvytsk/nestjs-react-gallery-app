@@ -9,7 +9,6 @@
         border: 1px solid #cccccc;
         margin: 10px;
         
-
         /* The overlay effect - lays on top of the container and over the image */
         & .item__overlay {
             position: absolute;
@@ -38,25 +37,30 @@
         &:hover .item__overlay {
             opacity: 1;
         }
-
-        img {
-            flex-basis: 25%;
-            flex-grow: 0;
-            flex-shrink: 0;
-            object-fit: cover;
-            vertical-align: middle;
-            box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
-        }
-
-        video {
-            flex-basis: 25%;
-            flex-grow: 0;
-            flex-shrink: 0;
-            object-fit: cover;
-            vertical-align: middle;
-            box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
-        }
     }
 
+    img {
+        flex-basis: 25%;
+        flex-grow: 0;
+        flex-shrink: 0;
+        object-fit: cover;
+        vertical-align: middle;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    }
+
+    video {
+        flex-basis: 25%;
+        flex-grow: 0;
+        flex-shrink: 0;
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+        
+        vertical-align: middle;
+        box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+
+        &::-webkit-media-controls-fullscreen-button {
+        }
+    }
 }
 

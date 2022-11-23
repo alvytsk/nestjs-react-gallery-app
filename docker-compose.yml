@@ -98,6 +98,7 @@ services:
     image: gallery-worker
     container_name: worker
     build:
+      target: release
       context: ./worker
       dockerfile: ./Dockerfile
     networks:
@@ -111,7 +112,7 @@ services:
       - backend/.env
     environment:
       REDIS_URL: 'redis://redis:6379'
-      WEB_CONCURRENCY: 1
+      WEB_CONCURRENCY: 3
 
 volumes:
   minio-storage:

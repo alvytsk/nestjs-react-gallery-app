@@ -121,9 +121,9 @@ function start(id) {
           ffmpeg(readStream)
             .on('end', async () => {
               console.log('<<<<< file has been converted succesfully');
-              readStream.unpipe(writeStream);
-              readStream.destroy();
-              writeStream.destroy();
+              // readStream.unpipe(writeStream);
+              // readStream.destroy();
+              // writeStream.destroy();
 
               const record = await db.saveFileInfo({
                 id: getFilenameAndExtension(fileId).filename,
@@ -143,9 +143,9 @@ function start(id) {
               console.log('an error happened: ' + err.message);
               console.log('ffmpeg stdout: ' + stdout);
               console.log('ffmpeg stderr: ' + stderr);
-              readStream.unpipe(writeStream);
-              readStream.destroy();
-              writeStream.destroy();
+              // readStream.unpipe(writeStream);
+              // readStream.destroy();
+              // writeStream.destroy();
 
               done(null, result);
             })

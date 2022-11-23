@@ -1,4 +1,6 @@
 import AWS from 'aws-sdk';
+// import * as AWS from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
 
 export default class S3Service {
@@ -7,6 +9,7 @@ export default class S3Service {
   constructor(config) {
     this.s3 = new AWS.S3({
       ...config,
+      region: 'us-east-1',
       s3ForcePathStyle: true, // needed with minio
       signatureVersion: 'v4'
     });
@@ -50,6 +53,17 @@ export default class S3Service {
 
   uploadStream({ bucketName, keyName }) {
     const pass = new stream.PassThrough();
+
+    // const upload = new Upload({
+    //   client: this.s3,
+    //   params: { Bucket: bucketName, Key: keyName, Body: pass }
+    // });
+
+    // upload.done().then((res, error) => {
+    //   console.log(res);
+    // });
+
+    // return pass;
 
     const params = { Bucket: bucketName, Key: keyName, Body: pass };
 

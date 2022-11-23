@@ -25,7 +25,7 @@ const UploadForm = () => {
         if (item.jobId) {
           pollHandler = setInterval(() => {
             item.jobId && dispatch(getUploadingStatus(item.jobId));
-          }, 1000);
+          }, 250);
           return false;
         }
       });
