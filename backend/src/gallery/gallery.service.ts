@@ -12,7 +12,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
-import sharp from 'sharp';
 import { UploadedFile, UploadedFileDocument } from './schemas/file.schema';
 import { CloudService } from '../cloud/cloud.service';
 import { UploadedDto } from 'src/cloud/dto/uploaded.dto';
@@ -55,18 +54,18 @@ export class GalleryService {
     return true;
   }
 
-  private async generateThumbnail(thumbFile: UploadedDto, file: UploadedDto) {
-    try {
-      thumbFile.buffer = await sharp(file.buffer)
-        .resize(200, 200)
-        .sharpen()
-        .webp({ quality: 80 })
-        .toBuffer();
-      return thumbFile;
-    } catch (err) {
-      throw new ConflictException(err.keyValue);
-    }
-  }
+  // private async generateThumbnail(thumbFile: UploadedDto, file: UploadedDto) {
+  //   try {
+  //     thumbFile.buffer = await sharp(file.buffer)
+  //       .resize(200, 200)
+  //       .sharpen()
+  //       .webp({ quality: 80 })
+  //       .toBuffer();
+  //     return thumbFile;
+  //   } catch (err) {
+  //     throw new ConflictException(err.keyValue);
+  //   }
+  // }
 
   checkFiles(files: Array<UploadedDto>) {
     if (!files || files.length === 0) {
@@ -82,75 +81,75 @@ export class GalleryService {
     });
   }
 
-  async uploadFiles(files: Array<UploadedDto>) {
-    this.checkFiles(files);
+  // async uploadFiles(files: Array<UploadedDto>) {
+  //   this.checkFiles(files);
 
-    try {
-      const result = await Promise.all(
-        files.map(async (file) => await this.uploadFile(file)),
-      );
+  //   try {
+  //     const result = await Promise.all(
+  //       files.map(async (file) => await this.uploadFile(file)),
+  //     );
 
-      return result;
-    } catch (err) {
-      console.log(err);
-      throw new BadGatewayException(err);
-    }
-  }
+  //     return result;
+  //   } catch (err) {
+  //     console.log(err);
+  //     throw new BadGatewayException(err);
+  //   }
+  // }
 
-  async uploadFile(file: UploadedDto) {
-    const hashedFilename = this.generateHashedFilename(file.originalname);
-    const imageType = file.mimetype.match(/^image\/(.*)/)[1];
-    const promises = [];
+  // async uploadFile(file: UploadedDto) {
+  //   const hashedFilename = this.generateHashedFilename(file.originalname);
+  //   const imageType = file.mimetype.match(/^image\/(.*)/)[1];
+  //   const promises = [];
 
-    const originalFile: UploadedDto = {
-      ...file,
-      hashedname: hashedFilename.filename + hashedFilename.extension,
-    };
+  //   const originalFile: UploadedDto = {
+  //     ...file,
+  //     hashedname: hashedFilename.filename + hashedFilename.extension,
+  //   };
 
-    const thumbFile: UploadedDto = {
-      ...file,
-      hashedname: hashedFilename.filename + '-thumbnail.webp',
-      buffer: null,
-    };
+  //   const thumbFile: UploadedDto = {
+  //     ...file,
+  //     hashedname: hashedFilename.filename + '-thumbnail.webp',
+  //     buffer: null,
+  //   };
 
-    promises.push(
-      this.cloudService.uploadFile(
-        await this.generateThumbnail(thumbFile, file),
-      ),
-    );
-    promises.push(this.cloudService.uploadFile(originalFile));
+  //   promises.push(
+  //     this.cloudService.uploadFile(
+  //       await this.generateThumbnail(thumbFile, file),
+  //     ),
+  //   );
+  //   promises.push(this.cloudService.uploadFile(originalFile));
 
-    let result = await Promise.all(promises).then(async () => {
-      const fileObject = {
-        name: file.originalname,
-        hashedname: file.hashedname,
-        url: await this.cloudService.generatePresignedUrl(thumbFile.hashedname),
-        type: file.mimetype,
-        id: file.fieldname,
-      };
+  //   let result = await Promise.all(promises).then(async () => {
+  //     const fileObject = {
+  //       name: file.originalname,
+  //       hashedname: file.hashedname,
+  //       url: await this.cloudService.generatePresignedUrl(thumbFile.hashedname),
+  //       type: file.mimetype,
+  //       id: file.fieldname,
+  //     };
 
-      return fileObject;
-    });
+  //     return fileObject;
+  //   });
 
-    const record = await this.pushImageFileToDB(
-      hashedFilename.filename,
-      originalFile.originalname,
-      originalFile.mimetype,
-      originalFile.hashedname,
-      thumbFile.hashedname,
-    );
+  //   const record = await this.pushImageFileToDB(
+  //     hashedFilename.filename,
+  //     originalFile.originalname,
+  //     originalFile.mimetype,
+  //     originalFile.hashedname,
+  //     thumbFile.hashedname,
+  //   );
 
-    // console.log({ record });
+  //   // console.log({ record });
 
-    result = {
-      ...result,
-      id: record._id,
-    };
+  //   result = {
+  //     ...result,
+  //     id: record._id,
+  //   };
 
-    // console.log({ result });
+  //   // console.log({ result });
 
-    return result;
-  }
+  //   return result;
+  // }
 
   // async downloadFile(id: string): Promise<StorageFile> {}
 

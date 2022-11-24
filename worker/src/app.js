@@ -1,16 +1,11 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-import fs, { read } from 'fs';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
-// import AWS from 'aws-sdk';
-import S3Service from './s3service.js';
-import Database from './db.js';
+import S3Service from './services/s3.js';
+import Database from './services/db.js';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
-// import mongoose from 'mongoose';
-
-// console.log(process.env);
 
 // Connect to a local redis instance locally, and the Heroku-provided URL in production
 let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
@@ -29,16 +24,20 @@ const MIME_TYPE_MAP = {
   'video/mp4': { extension: 'mp4', type: 'video' }
 };
 
-function start(id) {
+function start(id, disconnect) {
   // Connect to the named work queue
   const fileProcQueue = new Queue('files-processing', REDIS_URL);
 
-  console.log(`Worker ${id}/${workers} started`);
+  console.log(`Worker ${id} started`);
 
   const s3 = new S3Service({
-    accessKeyId: process.env.MINIO_ACCESS_KEY,
-    secretAccessKey: process.env.MINIO_SECRET_KEY,
-    endpoint: process.env.MINIO_URI
+    credentials: {
+      accessKeyId: process.env.MINIO_ACCESS_KEY,
+      secretAccessKey: process.env.MINIO_SECRET_KEY
+    },
+    endpoint: process.env.MINIO_URI,
+
+    forcePathStyle: true // only for Minio
   });
 
   const db = new Database({ uri: process.env.MONGODB_URI });
@@ -58,15 +57,12 @@ function start(id) {
       return;
     }
 
-    // const isImage = MIME_TYPE_MAP[mimeType].type === 'image';
-    // console.log({ isImage });
-
     let result = {};
 
     switch (MIME_TYPE_MAP[type].type) {
       case 'image':
         {
-          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({ bucketName: 'test', keyName: fileId });
 
           if ('error' in readStream) {
             done(null, {
@@ -97,7 +93,7 @@ function start(id) {
               done(null, record);
             })
             .catch((err) => {
-              console.log(err);
+              console.log(err.message);
               done(null, {
                 error: err.message
               });
@@ -112,18 +108,15 @@ function start(id) {
 
           const thumbnail = getFilenameAndExtension(fileId).filename + '-sm.mp4';
 
-          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({ bucketName: 'test', keyName: fileId });
           const writeStream = s3.uploadStream({
             bucketName: 'test',
             keyName: thumbnail
-          }).writeStream;
+          }).stream;
 
-          ffmpeg(readStream)
+          const transform = ffmpeg(readStream)
             .on('end', async () => {
               console.log('<<<<< file has been converted succesfully');
-              // readStream.unpipe(writeStream);
-              // readStream.destroy();
-              // writeStream.destroy();
 
               const record = await db.saveFileInfo({
                 id: getFilenameAndExtension(fileId).filename,
@@ -143,9 +136,8 @@ function start(id) {
               console.log('an error happened: ' + err.message);
               console.log('ffmpeg stdout: ' + stdout);
               console.log('ffmpeg stderr: ' + stderr);
-              // readStream.unpipe(writeStream);
-              // readStream.destroy();
-              // writeStream.destroy();
+
+              // readStream.end();
 
               done(null, result);
             })
@@ -159,11 +151,21 @@ function start(id) {
             .videoCodec('libx264')
             .audioCodec('aac')
             .outputFormat('mp4')
-            .outputOptions(['-movflags frag_keyframe+empty_moov'])
-            .pipe(writeStream, { end: true });
+            .outputOptions(['-movflags frag_keyframe+empty_moov']);
+
+          const pipeline = transform.pipe(writeStream, { end: true });
+
+          pipeline.on('close', () => {
+            console.log('upload successful');
+          });
         }
         break;
     }
+  });
+
+  process.on('SIGTERM', () => {
+    console.log(`Worker ${id} exiting (cleanup here)`);
+    disconnect();
   });
 }
 

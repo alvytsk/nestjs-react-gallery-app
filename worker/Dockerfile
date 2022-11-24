@@ -115,4 +115,4 @@ RUN npm install
 
 COPY . .
 
-CMD ["node", "src/worker.js"]
+CMD ["node", "src/app.js"]

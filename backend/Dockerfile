@@ -4,17 +4,13 @@
 # BUILD FOR LOCAL DEVELOPMENT
 ###################
 
-FROM node:lts-bullseye-slim AS development
+FROM node:18-alpine3.16 AS development
 
 # Create app directory
 WORKDIR /usr/src/app
 COPY --chown=node:node package*.json ./
 RUN npm install
 COPY --chown=node:node . .
-
-RUN	su node \
-  && npm install sharp --g --production --unsafe-perm \
-  && chown node:node /usr/local/lib/node_modules -R
 
 USER node
 
@@ -24,7 +20,7 @@ USER node
 # BUILD FOR PRODUCTION
 ###################
 
-FROM node:lts-bullseye-slim AS build
+FROM node:18-alpine3.16 AS build
 
 WORKDIR /usr/src/app
 COPY --chown=node:node package*.json ./
@@ -48,15 +44,11 @@ USER node
 # PRODUCTION
 ###################
 
-FROM node:lts-bullseye-slim AS production
+FROM node:18-alpine3.16 AS production
 
 # Copy the bundled code from the build stage to the production image
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-
-RUN	su node \
-  && npm install sharp --g --production --unsafe-perm \
-  && chown node:node /usr/local/lib/node_modules -R
 
 # Start the server using the production build
 CMD ["node", "dist/main"]
