@@ -1,6 +1,7 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
+import { spawn } from 'child_process';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
 import S3Service from './services/s3.js';
 import Database from './services/db.js';
@@ -32,13 +33,16 @@ function start(id, disconnect) {
 
   const s3 = new S3Service({
     credentials: {
-      accessKeyId: process.env.MINIO_ACCESS_KEY,
-      secretAccessKey: process.env.MINIO_SECRET_KEY
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
     },
-    endpoint: process.env.MINIO_URI,
+    region: process.env.AWS_REGION,
+    endpoint: process.env.AWS_URI,
 
     forcePathStyle: true // only for Minio
   });
+
+  // console.log(s3);
 
   const db = new Database({ uri: process.env.MONGODB_URI });
 
@@ -50,7 +54,7 @@ function start(id, disconnect) {
 
     console.log(fileId, originalFilename, type);
 
-    //Check mimetype and return error if we can handle it
+    // Check mimetype and return error if we can handle it
     if (!MIME_TYPE_MAP[type]) {
       console.error('File type is not supported');
       done(null, { error: 'File type is not supported' });
@@ -114,50 +118,52 @@ function start(id, disconnect) {
             keyName: thumbnail
           }).stream;
 
-          const transform = ffmpeg(readStream)
-            .on('end', async () => {
-              console.log('<<<<< file has been converted succesfully');
+          const ffmpeg = spawn('ffmpeg', ['-f', '-', '-i', '-']);
 
-              const record = await db.saveFileInfo({
-                id: getFilenameAndExtension(fileId).filename,
-                originalName: originalFilename,
-                type,
-                hashedName: fileId,
-                thumbnail: thumbnail
-              });
+          ffmpeg.stdin.write(readStream);
+          ffmpeg.stdout.write(writeStream);
 
-              done(null, record);
-            })
-            .on('progress', (progress) => {
-              console.log({ progress });
-              // console.log('Processing: ' + progress.percent + '% done');
-            })
-            .on('error', (err, stdout, stderr) => {
-              console.log('an error happened: ' + err.message);
-              console.log('ffmpeg stdout: ' + stdout);
-              console.log('ffmpeg stderr: ' + stderr);
+          // const transform = ffmpeg(readStream)
+          //   .on('end', async () => {
+          //     console.log('<<<<< file has been converted succesfully');
 
-              // readStream.end();
+          //     const record = await db.saveFileInfo({
+          //       id: getFilenameAndExtension(fileId).filename,
+          //       originalName: originalFilename,
+          //       type,
+          //       hashedName: fileId,
+          //       thumbnail: thumbnail
+          //     });
 
-              done(null, result);
-            })
-            .on('start', () => {
-              console.log('>>>> file starting');
-            })
-            // .size('640x480')
-            .duration('0:3')
-            .input('./assets/watermark.png')
-            .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
-            .videoCodec('libx264')
-            .audioCodec('aac')
-            .outputFormat('mp4')
-            .outputOptions(['-movflags frag_keyframe+empty_moov']);
+          //     done(null, record);
+          //   })
+          //   .on('progress', (progress) => {
+          //     console.log({ progress });
+          //     // console.log('Processing: ' + progress.percent + '% done');
+          //   })
+          //   .on('error', (err, stdout, stderr) => {
+          //     console.log('an error happened: ' + err.message);
+          //     console.log('ffmpeg stdout: ' + stdout);
+          //     console.log('ffmpeg stderr: ' + stderr);
 
-          const pipeline = transform.pipe(writeStream, { end: true });
+          //     done(null, result);
+          //   })
+          //   .on('start', () => {
+          //     console.log('>>>> file starting');
+          //   })
+          //   .duration('0:3')
+          //   .input('./assets/watermark.png')
+          //   .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
+          //   .videoCodec('libx264')
+          //   .audioCodec('aac')
+          //   .outputFormat('mp4')
+          //   .outputOptions(['-movflags frag_keyframe+empty_moov']);
 
-          pipeline.on('close', () => {
-            console.log('upload successful');
-          });
+          // const pipeline = transform.pipe(writeStream, { end: true });
+
+          // pipeline.on('close', () => {
+          //   console.log('upload successful');
+          // });
         }
         break;
     }

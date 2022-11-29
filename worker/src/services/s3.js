@@ -9,47 +9,34 @@ import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
 
 export default class S3Service {
-  s3;
+  _s3;
+  _error = '';
 
   constructor(config) {
-    this.s3 = new S3Client({
+    this._s3 = new S3Client({
       ...config,
-      region: 'us-east-1',
       s3ForcePathStyle: true, // needed with minio
       signatureVersion: 'v4'
     });
 
     //check connection
     this.getBuckets();
-
-    // this.s3.headBucket(
-    //   {
-    //     Bucket: 'test'
-    //   },
-    //   function (err, data) {
-    //     if (err) console.log(err, err.stack);
-    //   }
-    // );
   }
 
   async getBuckets() {
-    const listBucketsResult = await this.s3.send(new ListBucketsCommand({}));
+    try {
+      const listBucketsResult = await this._s3.send(new ListBucketsCommand({}));
 
-    console.log('getBuckets: ', listBucketsResult.Buckets);
+      console.log(listBucketsResult.Buckets);
+    } catch (e) {
+      console.log('ListBucketsCommand error:', e.message);
+    }
   }
 
   async uploadFile({ bucketName, keyName, data }) {
-    // return this.s3
-    //   .upload({
-    //     Bucket: bucketName,
-    //     Body: data,
-    //     Key: keyName
-    //   })
-    //   .promise();
-
     try {
       // uploading object with string data on Body
-      await this.s3.send(
+      await this._s3.send(
         new PutObjectCommand({
           Bucket: bucketName,
           Key: keyName,
@@ -58,33 +45,23 @@ export default class S3Service {
       );
 
       console.log(`Successfully uploaded ${bucketName}/${keyName}`);
-    } catch (err) {
-      console.log('Error', err);
+    } catch (e) {
+      console.log('PutObjectCommand error: ', e.message);
     }
   }
 
   async getReadableStream({ bucketName, keyName }) {
-    // const params = {
-    //   Bucket: bucketName,
-    //   Key: keyName
-    // };
-    // const readStream = this.s3.getObject(params).createReadStream();
-    // readStream.on('error', (e) => {
-    //   console.error(e.message);
-    //   return { error: e.message };
-    // });
-    // return readStream;
     let data;
 
     try {
-      data = await this.s3.send(
+      data = await this._s3.send(
         new GetObjectCommand({
           Bucket: bucketName,
           Key: keyName
         })
       );
-    } catch (err) {
-      console.log('Error', err);
+    } catch (e) {
+      console.log('GetObjectCommand error: ', e.message);
     }
 
     return data.Body;
@@ -93,26 +70,10 @@ export default class S3Service {
   uploadStream({ bucketName, keyName }) {
     const writeStream = new stream.PassThrough();
 
-    // const upload = new Upload({
-    //   client: this.s3,
-    //   params: { Bucket: bucketName, Key: keyName, Body: pass }
-    // });
-
-    // upload.done().then((res, error) => {
-    //   console.log(res);
-    // });
-
-    // return pass;
-
     const params = { Bucket: bucketName, Key: keyName, Body: writeStream };
 
-    // return {
-    //   writeStream: pass,
-    //   promise: this.s3.upload(params).promise()
-    // };
-
     const upload = new Upload({
-      client: this.s3,
+      client: this._s3,
       params
     });
 
