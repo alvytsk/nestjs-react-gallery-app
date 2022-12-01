@@ -1,7 +1,7 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
 import S3Service from './services/s3.js';
 import Database from './services/db.js';
@@ -66,7 +66,10 @@ function start(id, disconnect) {
     switch (MIME_TYPE_MAP[type].type) {
       case 'image':
         {
-          const readStream = await s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({
+            bucketName: process.env.AWS_BUCKET,
+            keyName: fileId
+          });
 
           if ('error' in readStream) {
             done(null, {
@@ -108,62 +111,59 @@ function start(id, disconnect) {
 
       case 'video':
         {
-          console.log('video');
-
           const thumbnail = getFilenameAndExtension(fileId).filename + '-sm.mp4';
 
-          const readStream = await s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({
+            bucketName: process.env.AWS_BUCKET,
+            keyName: fileId
+          });
           const writeStream = s3.uploadStream({
-            bucketName: 'test',
+            bucketName: process.env.AWS_BUCKET,
             keyName: thumbnail
           }).stream;
 
-          const ffmpeg = spawn('ffmpeg', ['-f', '-', '-i', '-']);
+          const transform = ffmpeg(readStream)
+            .duration('0:3')
+            .input('./assets/watermark.png')
+            .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
+            .videoCodec('libx264')
+            .audioCodec('aac')
+            .outputFormat('mp4')
+            .outputOptions(['-movflags frag_keyframe+empty_moov'])
+            .on('end', async () => {
+              console.log('<<<<< file has been converted succesfully');
 
-          ffmpeg.stdin.write(readStream);
-          ffmpeg.stdout.write(writeStream);
+              const record = await db.saveFileInfo({
+                id: getFilenameAndExtension(fileId).filename,
+                originalName: originalFilename,
+                type,
+                hashedName: fileId,
+                thumbnail: thumbnail
+              });
 
-          // const transform = ffmpeg(readStream)
-          //   .on('end', async () => {
-          //     console.log('<<<<< file has been converted succesfully');
+              done(null, record);
+            })
+            .on('progress', (progress) => {
+              console.log({ progress });
+              // console.log('Processing: ' + progress.percent + '% done');
+            })
+            .on('error', (err, stdout, stderr) => {
+              console.log('an error happened: ' + err.message);
+              console.log('ffmpeg stdout: ' + stdout);
+              console.log('ffmpeg stderr: ' + stderr);
 
-          //     const record = await db.saveFileInfo({
-          //       id: getFilenameAndExtension(fileId).filename,
-          //       originalName: originalFilename,
-          //       type,
-          //       hashedName: fileId,
-          //       thumbnail: thumbnail
-          //     });
+              done(null, result);
+            })
+            .on('start', () => {
+              console.log('>>>> file starting');
+            });
 
-          //     done(null, record);
-          //   })
-          //   .on('progress', (progress) => {
-          //     console.log({ progress });
-          //     // console.log('Processing: ' + progress.percent + '% done');
-          //   })
-          //   .on('error', (err, stdout, stderr) => {
-          //     console.log('an error happened: ' + err.message);
-          //     console.log('ffmpeg stdout: ' + stdout);
-          //     console.log('ffmpeg stderr: ' + stderr);
+          const pipeline = transform.pipe(writeStream, { end: true });
 
-          //     done(null, result);
-          //   })
-          //   .on('start', () => {
-          //     console.log('>>>> file starting');
-          //   })
-          //   .duration('0:3')
-          //   .input('./assets/watermark.png')
-          //   .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
-          //   .videoCodec('libx264')
-          //   .audioCodec('aac')
-          //   .outputFormat('mp4')
-          //   .outputOptions(['-movflags frag_keyframe+empty_moov']);
-
-          // const pipeline = transform.pipe(writeStream, { end: true });
-
-          // pipeline.on('close', () => {
-          //   console.log('upload successful');
-          // });
+          pipeline.on('close', () => {
+            readStream.destroy();
+            console.log('upload successful');
+          });
         }
         break;
     }

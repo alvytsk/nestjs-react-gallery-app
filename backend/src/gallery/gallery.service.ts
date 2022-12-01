@@ -237,7 +237,12 @@ export class GalleryService {
   }
 
   async testQueue(files: Array<UploadedDto>) {
-    const job = await this.filesProcQueue.add({ files });
+    const job = await this.filesProcQueue.add({
+      data: files,
+      opts: {
+        attempts: 1,
+      },
+    });
 
     console.log(`Job ${job.id} created`);
 
