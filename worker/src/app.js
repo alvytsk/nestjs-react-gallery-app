@@ -22,7 +22,8 @@ const MIME_TYPE_MAP = {
   'image/gif': { extension: 'gif', type: 'image' },
   'image/webp': { extension: 'webp', type: 'image' },
   'image/heif': { extension: 'heic', type: 'image' },
-  'video/mp4': { extension: 'mp4', type: 'video' }
+  'video/mp4': { extension: 'mp4', type: 'video' },
+  'video/quicktime': { extension: 'mov', type: 'video' }
 };
 
 function start(id, disconnect) {
@@ -129,6 +130,7 @@ function start(id, disconnect) {
             .videoCodec('libx264')
             .audioCodec('aac')
             .outputFormat('mp4')
+            // .addOutputOptions('-movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov')
             .outputOptions(['-movflags frag_keyframe+empty_moov'])
             .on('end', async () => {
               console.log('<<<<< file has been converted succesfully');
