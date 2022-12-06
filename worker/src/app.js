@@ -1,16 +1,12 @@
 // let throng = require('throng');
 import throng from 'throng';
 import Queue from 'bull';
-import fs, { read } from 'fs';
+import { spawn, exec } from 'child_process';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
-// import AWS from 'aws-sdk';
-import S3Service from './s3service.js';
-import Database from './db.js';
+import S3Service from './services/s3.js';
+import Database from './services/db.js';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
-// import mongoose from 'mongoose';
-
-// console.log(process.env);
 
 // Connect to a local redis instance locally, and the Heroku-provided URL in production
 let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
@@ -26,20 +22,28 @@ const MIME_TYPE_MAP = {
   'image/gif': { extension: 'gif', type: 'image' },
   'image/webp': { extension: 'webp', type: 'image' },
   'image/heif': { extension: 'heic', type: 'image' },
-  'video/mp4': { extension: 'mp4', type: 'video' }
+  'video/mp4': { extension: 'mp4', type: 'video' },
+  'video/quicktime': { extension: 'mov', type: 'video' }
 };
 
-function start(id) {
+function start(id, disconnect) {
   // Connect to the named work queue
   const fileProcQueue = new Queue('files-processing', REDIS_URL);
 
-  console.log(`Worker ${id}/${workers} started`);
+  console.log(`Worker ${id} started`);
 
   const s3 = new S3Service({
-    accessKeyId: process.env.MINIO_ACCESS_KEY,
-    secretAccessKey: process.env.MINIO_SECRET_KEY,
-    endpoint: process.env.MINIO_URI
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    },
+    region: process.env.AWS_REGION,
+    endpoint: process.env.AWS_URI,
+
+    forcePathStyle: true // only for Minio
   });
+
+  // console.log(s3);
 
   const db = new Database({ uri: process.env.MONGODB_URI });
 
@@ -51,22 +55,22 @@ function start(id) {
 
     console.log(fileId, originalFilename, type);
 
-    //Check mimetype and return error if we can handle it
+    // Check mimetype and return error if we can handle it
     if (!MIME_TYPE_MAP[type]) {
       console.error('File type is not supported');
       done(null, { error: 'File type is not supported' });
       return;
     }
 
-    // const isImage = MIME_TYPE_MAP[mimeType].type === 'image';
-    // console.log({ isImage });
-
     let result = {};
 
     switch (MIME_TYPE_MAP[type].type) {
       case 'image':
         {
-          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({
+            bucketName: process.env.AWS_BUCKET,
+            keyName: fileId
+          });
 
           if ('error' in readStream) {
             done(null, {
@@ -97,7 +101,7 @@ function start(id) {
               done(null, record);
             })
             .catch((err) => {
-              console.log(err);
+              console.log(err.message);
               done(null, {
                 error: err.message
               });
@@ -108,22 +112,28 @@ function start(id) {
 
       case 'video':
         {
-          console.log('video');
-
           const thumbnail = getFilenameAndExtension(fileId).filename + '-sm.mp4';
 
-          const readStream = s3.getReadableStream({ bucketName: 'test', keyName: fileId });
+          const readStream = await s3.getReadableStream({
+            bucketName: process.env.AWS_BUCKET,
+            keyName: fileId
+          });
           const writeStream = s3.uploadStream({
-            bucketName: 'test',
+            bucketName: process.env.AWS_BUCKET,
             keyName: thumbnail
-          }).writeStream;
+          }).stream;
 
-          ffmpeg(readStream)
+          const transform = ffmpeg(readStream)
+            .duration('0:3')
+            .input('./assets/watermark.png')
+            .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
+            .videoCodec('libx264')
+            .audioCodec('aac')
+            .outputFormat('mp4')
+            // .addOutputOptions('-movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov')
+            .outputOptions(['-movflags frag_keyframe+empty_moov'])
             .on('end', async () => {
               console.log('<<<<< file has been converted succesfully');
-              readStream.unpipe(writeStream);
-              readStream.destroy();
-              writeStream.destroy();
 
               const record = await db.saveFileInfo({
                 id: getFilenameAndExtension(fileId).filename,
@@ -143,27 +153,27 @@ function start(id) {
               console.log('an error happened: ' + err.message);
               console.log('ffmpeg stdout: ' + stdout);
               console.log('ffmpeg stderr: ' + stderr);
-              readStream.unpipe(writeStream);
-              readStream.destroy();
-              writeStream.destroy();
 
               done(null, result);
             })
             .on('start', () => {
               console.log('>>>> file starting');
-            })
-            // .size('640x480')
-            .duration('0:3')
-            .input('./assets/watermark.png')
-            .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
-            .videoCodec('libx264')
-            .audioCodec('aac')
-            .outputFormat('mp4')
-            .outputOptions(['-movflags frag_keyframe+empty_moov'])
-            .pipe(writeStream, { end: true });
+            });
+
+          const pipeline = transform.pipe(writeStream, { end: true });
+
+          pipeline.on('close', () => {
+            readStream.destroy();
+            console.log('upload successful');
+          });
         }
         break;
     }
+  });
+
+  process.on('SIGTERM', () => {
+    console.log(`Worker ${id} exiting (cleanup here)`);
+    disconnect();
   });
 }
 

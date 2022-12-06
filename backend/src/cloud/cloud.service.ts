@@ -9,9 +9,9 @@ export class CloudService {
 
   constructor(private readonly configService: ConfigService) {
     this.s3 = new S3({
-      accessKeyId: this.configService.get('MINIO_ACCESS_KEY'),
-      secretAccessKey: this.configService.get('MINIO_SECRET_KEY'),
-      endpoint: this.configService.get('MINIO_URI'),
+      accessKeyId: this.configService.get('AWS_ACCESS_KEY_ID'),
+      secretAccessKey: this.configService.get('AWS_SECRET_ACCESS_KEY'),
+      endpoint: this.configService.get('AWS_URI'),
       s3ForcePathStyle: true, // needed with minio
       signatureVersion: 'v4',
     });

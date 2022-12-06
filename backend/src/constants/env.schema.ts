@@ -1,13 +1,14 @@
-import * as Joi from 'joi';
+import Joi from 'joi';
 
 const schema = Joi.object({
   MONGODB_URI: Joi.string(),
-  // MONGODB_USER: Joi.string(),
-  // MONGODB_PWD: Joi.string(),
-  MINIO_ACCESS_KEY: Joi.string(),
-  MINIO_SECRET_KEY: Joi.string(),
-  MINIO_URI: Joi.string(),
-  MINIO_BUCKET_NAME: Joi.string(),
+  AWS_ACCESS_KEY_ID: Joi.string(),
+  AWS_SECRET_ACCESS_KEY: Joi.string(),
+  AWS_REGION: Joi.string(),
+  AWS_URI: Joi.string(),
+  REDIS_HOST: Joi.string(),
+  REDIS_PORT: Joi.string(),
+  REDIS_PASSWORD: Joi.string(),
 });
 
 export const envSchema = schema;

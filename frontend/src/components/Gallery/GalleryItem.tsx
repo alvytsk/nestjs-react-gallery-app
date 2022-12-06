@@ -15,14 +15,14 @@ const GalleryItem: React.FC<{ file: GalleryItemDTO }> = ({ file }) => {
       {file.type === 'image/jpeg' ? (
         <img src={file.url} alt={file.name} />
       ) : (
-        <video width="200" height="200" controls>
+        <video controls>
           <source src={file.url} type="video/mp4" />
         </video>
       )}
       <div className="item__overlay">
+        <div className="item__overlay-text">{file.name}</div>
         <button>Download</button>
         <button onClick={onDelete}>Delete</button>
-        <div className="item__overlay-text">{file.name}</div>
       </div>
     </div>
   );
