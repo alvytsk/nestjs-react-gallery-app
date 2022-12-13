@@ -96,9 +96,10 @@ services:
     image: gallery-worker
     container_name: worker
     build:
-      target: release
+      target: development
       context: ./worker
       dockerfile: ./Dockerfile
+    entrypoint: ['npm', 'run', 'dev']
     networks:
       - gallery-network
     restart: unless-stopped
@@ -106,11 +107,13 @@ services:
       - redis
     volumes:
       - ./worker-tmp:/usr/src/app/files
+      - ./worker:/usr/src/app
+      - /usr/src/app/node_modules
     env_file:
       - backend/.env
     environment:
       REDIS_URL: 'redis://redis:6379'
-      WEB_CONCURRENCY: 3
+      WEB_CONCURRENCY: 2
 
 volumes:
   minio-storage:

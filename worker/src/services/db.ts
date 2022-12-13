@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export default class Database {
   uploadedFileModel;
 
-  constructor(config) {
+  constructor(config: any) {
     this._connect(config.uri);
 
     const uploadedFileSchema = new mongoose.Schema({
@@ -17,7 +17,7 @@ export default class Database {
     this.uploadedFileModel = mongoose.model('UploadedFile', uploadedFileSchema);
   }
 
-  _connect(uri) {
+  _connect(uri: string) {
     mongoose
       .connect(uri)
       .then(() => {
@@ -28,7 +28,7 @@ export default class Database {
       });
   }
 
-  async saveFileInfo(data) {
+  async saveFileInfo(data: any) {
     const uploadFileModelInstance = new this.uploadedFileModel(data);
     return await uploadFileModelInstance.save();
   }

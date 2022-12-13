@@ -1,5 +1,5 @@
 // let throng = require('throng');
-import throng from 'throng';
+import throng, { WorkerCallback } from 'throng';
 import Queue from 'bull';
 import { spawn, exec } from 'child_process';
 import { generateHashedFilename, getFilenameAndExtension } from './utils.js';
@@ -8,14 +8,21 @@ import Database from './services/db.js';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 
+console.log(process.env);
+
 // Connect to a local redis instance locally, and the Heroku-provided URL in production
-let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const AWS_BUCKET = process.env.AWS_BUCKET || 'test';
 
 // Spin up multiple processes to handle jobs to take advantage of more CPU cores
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
-let workers = process.env.WEB_CONCURRENCY || 1;
+const workers = process.env.WEB_CONCURRENCY || 1;
 
-const MIME_TYPE_MAP = {
+type MimetypeMap = {
+  [key: string]: { extension: string; type: string };
+};
+
+const MIME_TYPE_MAP: MimetypeMap = {
   'image/png': { extension: 'png', type: 'image' },
   'image/jpeg': { extension: 'jpeg', type: 'image' },
   'image/jpg': { extension: 'jpg', type: 'image' },
@@ -26,7 +33,7 @@ const MIME_TYPE_MAP = {
   'video/quicktime': { extension: 'mov', type: 'video' }
 };
 
-function start(id, disconnect) {
+function start(id: number, disconnect: () => void) {
   // Connect to the named work queue
   const fileProcQueue = new Queue('files-processing', REDIS_URL);
 
@@ -68,11 +75,11 @@ function start(id, disconnect) {
       case 'image':
         {
           const readStream = await s3.getReadableStream({
-            bucketName: process.env.AWS_BUCKET,
+            bucketName: AWS_BUCKET,
             keyName: fileId
           });
 
-          if ('error' in readStream) {
+          if (readStream && 'error' in readStream) {
             done(null, {
               error: readStream.error
             });
@@ -115,11 +122,11 @@ function start(id, disconnect) {
           const thumbnail = getFilenameAndExtension(fileId).filename + '-sm.mp4';
 
           const readStream = await s3.getReadableStream({
-            bucketName: process.env.AWS_BUCKET,
+            bucketName: AWS_BUCKET,
             keyName: fileId
           });
           const writeStream = s3.uploadStream({
-            bucketName: process.env.AWS_BUCKET,
+            bucketName: AWS_BUCKET,
             keyName: thumbnail
           }).stream;
 
@@ -179,5 +186,11 @@ function start(id, disconnect) {
 
 // Initialize the clustered worker process
 // See: https://devcenter.heroku.com/articles/node-concurrency for more info
-throng({ workers, start });
+
+process.env.NODE_ENV === 'production'
+  ? throng({ workers, start })
+  : start(1, () => {
+      console.log('break');
+    });
+
 // start(1);
