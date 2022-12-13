@@ -1,0 +1,9 @@
+{
+  "verbose": true,
+  "watch": ["src/**/*.ts", "src/**/*.js"],
+  "ext": "ts, js, json",
+  "ignore": [],
+  "execMap": {
+    "ts": "node --loader ts-node/esm  --inspect=0.0.0.0:9229 --nolazy -r ts-node/register"
+  }
+}

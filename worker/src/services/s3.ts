@@ -12,7 +12,7 @@ export default class S3Service {
   _s3;
   _error = '';
 
-  constructor(config) {
+  constructor(config: any) {
     this._s3 = new S3Client({
       ...config,
       s3ForcePathStyle: true, // needed with minio
@@ -28,12 +28,20 @@ export default class S3Service {
       const listBucketsResult = await this._s3.send(new ListBucketsCommand({}));
 
       console.log(listBucketsResult.Buckets);
-    } catch (e) {
+    } catch (e: any) {
       console.log('ListBucketsCommand error:', e.message);
     }
   }
 
-  async uploadFile({ bucketName, keyName, data }) {
+  async uploadFile({
+    bucketName,
+    keyName,
+    data
+  }: {
+    bucketName: string;
+    keyName: string;
+    data: any;
+  }) {
     try {
       // uploading object with string data on Body
       await this._s3.send(
@@ -45,13 +53,13 @@ export default class S3Service {
       );
 
       console.log(`Successfully uploaded ${bucketName}/${keyName}`);
-    } catch (e) {
+    } catch (e: any) {
       console.log('PutObjectCommand error: ', e.message);
     }
   }
 
-  async getReadableStream({ bucketName, keyName }) {
-    let data;
+  async getReadableStream({ bucketName, keyName }: { bucketName: string; keyName: string }) {
+    let data: any;
 
     try {
       data = await this._s3.send(
@@ -60,14 +68,14 @@ export default class S3Service {
           Key: keyName
         })
       );
-    } catch (e) {
+    } catch (e: any) {
       console.log('GetObjectCommand error: ', e.message);
     }
 
     return data.Body;
   }
 
-  uploadStream({ bucketName, keyName }) {
+  uploadStream({ bucketName, keyName }: { bucketName: string; keyName: string }) {
     const writeStream = new stream.PassThrough();
 
     const params = { Bucket: bucketName, Key: keyName, Body: writeStream };
