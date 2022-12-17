@@ -20,6 +20,7 @@ import Queue from 'bull';
 @Injectable()
 export class GalleryService {
   private filesProcQueue: Queue.Queue<any>;
+  private periodicTestQueue: Queue.Queue<any>;
 
   constructor(
     private configService: ConfigService,
@@ -28,6 +29,19 @@ export class GalleryService {
     private uploadedFileModel: Model<UploadedFileDocument>,
   ) {
     this.filesProcQueue = new Queue('files-processing', 'redis://redis:6379');
+    this.periodicTestQueue = new Queue('test-queue', 'redis://redis:6379');
+
+    this.periodicTestQueue.add(
+      { foo: 'bar' },
+      // {
+      //   repeat: {
+      //     every: 5000,
+      //     limit: 10,
+      //   },
+      // },
+      // Repeat payment job once every day at 3:15 (am)
+      { repeat: { cron: '45 8 * * *' } },
+    );
   }
 
   private generateHashedFilename(originalFilename: string): {
@@ -271,12 +285,18 @@ export class GalleryService {
 
       console.log({ jobResponse });
 
-      data = {
-        ...jobResponse,
-        url: await this.cloudService.generatePresignedUrl(
-          jobResponse.thumbnail,
-        ),
-      };
+      if ('error' in jobResponse) {
+        data = {
+          ...jobResponse,
+        };
+      } else {
+        data = {
+          ...jobResponse,
+          url: await this.cloudService.generatePresignedUrl(
+            jobResponse.thumbnail,
+          ),
+        };
+      }
 
       // job.remove();
     }
