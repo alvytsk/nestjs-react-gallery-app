@@ -12,7 +12,7 @@ const GalleryItem: React.FC<{ file: GalleryItemDTO }> = ({ file }) => {
 
   return (
     <div className="gallery__item">
-      {file.type === 'image/jpeg' ? (
+      {file.type === 'image/webp' ? (
         <img src={file.url} alt={file.name} />
       ) : (
         <video controls>

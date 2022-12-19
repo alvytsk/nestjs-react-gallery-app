@@ -4,8 +4,20 @@ export default class FfmpegService {
   constructor() {}
 
   probeFile(stream: any) {
-    ffmpeg.ffprobe(stream, (err: any, data: FfprobeData) => {
-      console.log(data.streams);
+    return new Promise((resolve, reject) => {
+      return ffmpeg.ffprobe(stream, (err: any, data: FfprobeData) => {
+        if (err) {
+          return reject(err);
+        }
+        // console.log(data.streams);
+
+        const { duration, size } = data.format;
+
+        return resolve({
+          size,
+          durationInSeconds: Math.floor(Number(duration))
+        });
+      });
     });
   }
 }

@@ -1,4 +1,7 @@
-FROM alvytsk/node-ffmpeg as development
+FROM alvytsk/node-ffmpeg as base
+
+############################################
+FROM base as dev-dependencies
 
 # Environment Variables
 ARG LIBVIPS_VERSION_MAJOR_MINOR=8.13
@@ -31,20 +34,26 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community" >> 
     make install && \
     apk add --no-cache libheif glib-dev 
 
-WORKDIR /usr/src/app
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install --production --frozen-lockfile
+
+
+############################################
+FROM dev-dependencies as development
+
+RUN yarn install --frozen-lockfile
 COPY . .
-RUN yarn && yarn build
-    
-RUN echo 'Cleanup' && \
-    rm -rf /tmp/vips-${LIBVIPS_VERSION_MAJOR_MINOR}.${LIBVIPS_VERSION_PATCH} && \
-    apk del --purge .build-dependencies && \
-    rm -rf /var/cache/apk/*
+RUN yarn build
 
 
-FROM development AS production
+############################################
+FROM base as production
+
+WORKDIR /app
 ENV NODE_ENV=production
-WORKDIR /usr/src/app
-COPY package.json .
-RUN npm ci --only=production
-COPY --from=development ./usr/src/app/build ./build
+COPY --from=dev-dependencies /usr/lib /usr/lib
+COPY --from=dev-dependencies /app/node_modules ./node_modules
+COPY --from=development      /app/build        ./build
+COPY package.json yarn.lock ./
 CMD [ "node", "build/app.js" ]

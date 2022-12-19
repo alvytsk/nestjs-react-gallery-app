@@ -106,9 +106,9 @@ services:
     depends_on:
       - redis
     volumes:
-      - ./worker-tmp:/usr/src/app/files
-      - ./worker:/usr/src/app
-      - /usr/src/app/node_modules
+      - ./worker-tmp:/app/files
+      - ./worker:/app
+      - /app/node_modules
     env_file:
       - backend/.env
     environment:

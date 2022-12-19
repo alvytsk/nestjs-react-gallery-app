@@ -63,12 +63,17 @@ function start(id: number, disconnect: () => void) {
     console.log(`fileProcQueue started at ${id} worker `);
 
     let progress = 0;
-    const { fileId, originalFilename, type } = job.data;
+    const { fileId, originalFilename } = job.data;
+    let { type } = job.data;
 
     console.log({ fileId, originalFilename, type });
 
-    // Check mimetype and return error if we can handle it
-    if (!MIME_TYPE_MAP[!!type ? type : 'image/heif']) {
+    if (!Boolean(type) && getFilenameAndExtension(originalFilename).extension === 'heic') {
+      type = 'image/heif';
+    }
+
+    if (!MIME_TYPE_MAP[type]) {
+      // Check mimetype and return error if we can handle it
       console.error('File type is not supported');
       done(null, { error: 'File type is not supported' });
       return;
@@ -76,7 +81,7 @@ function start(id: number, disconnect: () => void) {
 
     let result = {};
 
-    switch (MIME_TYPE_MAP[!!type ? type : 'image/heif'].type) {
+    switch (MIME_TYPE_MAP[type].type) {
       case 'image':
         {
           const readStream = await s3.getReadableStream({
@@ -94,18 +99,18 @@ function start(id: number, disconnect: () => void) {
           pipeline
             .resize(200, 200)
             .sharpen()
-            .composite([{ input: './assets/watermark.png', gravity: 'center' }])
+            // .composite([{ input: './assets/watermark.png', gravity: 'center' }])
             .webp({ quality: 80 })
             .toBuffer()
             .then(async (data) => {
               const thumbFilename = `${getFilenameAndExtension(fileId).filename}-thumbnail.webp`;
 
-              await s3.uploadFile({ bucketName: 'test', keyName: thumbFilename, data });
+              await s3.uploadFile({ bucketName: AWS_BUCKET, keyName: thumbFilename, data });
 
               const record = await db.saveFileInfo({
                 id: getFilenameAndExtension(fileId).filename,
                 originalName: originalFilename,
-                type: 'image/jpeg',
+                type: 'image/webp',
                 hashedName: fileId,
                 thumbnail: thumbFilename
               });

@@ -9,7 +9,12 @@ export const generateHashedFilename = (originalFilename: string) => {
   };
 };
 
-export const getFilenameAndExtension = (filename: string) => {
+export type FilenameWithExtension = {
+  filename: string;
+  extension: string;
+};
+
+export const getFilenameAndExtension = (filename: string): FilenameWithExtension => {
   const lastDot = filename.lastIndexOf('.');
   const filenameWithoutExt = filename.substring(0, lastDot) || filename;
   const extension = filename.substring(lastDot + 1, filename.length);
