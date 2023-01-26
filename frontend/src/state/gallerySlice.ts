@@ -38,12 +38,12 @@ export const getUploadFileUrl = createAsyncThunk<UploadingItemDTO, File, { rejec
 export const uploadFile = createAsyncThunk<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   any,
-  { file: File; url: string },
+  { file: File | Blob; url: string; name: string },
   { rejectValue: string }
->('gallery/uploadFile', async ({ file, url }, thunkApi) => {
+>('gallery/uploadFile', async ({ file, url, name }, thunkApi) => {
   const onUploadProgress = (event) => {
     const percentage = Math.round((100 * event.loaded) / event.total);
-    thunkApi.dispatch(setUploadingProgress({ id: file.name, progress: percentage }));
+    thunkApi.dispatch(setUploadingProgress({ id: name, progress: percentage }));
   };
 
   try {

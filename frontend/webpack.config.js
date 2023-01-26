@@ -2,6 +2,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 var path = require('path');
 
@@ -59,8 +60,8 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.jsx'],
       alias: {
-        "~": path.resolve(__dirname, "src/"),
-      },
+        '~': path.resolve(__dirname, 'src/')
+      }
     },
     optimization: {
       splitChunks: { chunks: 'all' },
@@ -83,12 +84,12 @@ module.exports = (env, argv) => {
       client: {
         overlay: {
           errors: true,
-          warnings: false,
+          warnings: false
         },
-        progress: false,
-      },
+        progress: false
+      }
     },
-    target: "web",
+    target: 'web',
     plugins: [
       new CleanWebpackPlugin(),
       new HtmlWebpackPlugin({ template: './public/index.html' }),
@@ -104,6 +105,9 @@ module.exports = (env, argv) => {
             noErrorOnMissing: true
           }
         ]
+      }),
+      new webpack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer']
       })
     ]
   };

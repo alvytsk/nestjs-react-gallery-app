@@ -29,6 +29,7 @@ const MIME_TYPE_MAP: MimetypeMap = {
   'image/webp': { extension: 'webp', type: 'image' },
   'image/heif': { extension: 'heic', type: 'image' },
   'video/mp4': { extension: 'mp4', type: 'video' },
+  'video/avi': { extension: 'avi', type: 'video' },
   'video/quicktime': { extension: 'mov', type: 'video' }
 };
 
@@ -140,70 +141,122 @@ function start(id: number, disconnect: () => void) {
             keyName: thumbnail
           }).stream;
 
-          const ffmpegService = new FfmpegService();
-          ffmpegService.probeFile(readStream);
+          // const ffmpegService = new FfmpegService();
+          // const data = await ffmpegService.probeFile(readStream);
 
-          done(null, {});
-          return;
+          // console.log(data);
 
-          const transform = ffmpeg(readStream)
-            // .withVideoCodec('libvpx')
-            // .duration('0:3')
-            // .input('./assets/watermark.png')
-            // .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
-            // .videoCodec('libx264')
-            // .audioCodec('aac')
-            // .outputFormat('webm')
-            // .addOutputOptions('-movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov')
-            // .outputOptions(['-movflags frag_keyframe+empty_moov'])
-            .videoCodec('libvpx') //libvpx-vp9 could be used too
-            .audioCodec('aac')
-            .videoBitrate(1000, true) //Outputting a constrained 1Mbit VP8 video stream
-            .outputOptions(
-              '-minrate',
-              '1000',
-              '-maxrate',
-              '1000',
-              '-threads',
-              '1', //Use number of real cores available on the computer - 1
-              '-flags',
-              '+global_header', //WebM won't love if you if you don't give it some headers
-              '-psnr'
-            ) //Show PSNR measurements in output. Anything above 40dB indicates excellent fidelity
-            .on('end', async () => {
-              console.log('<<<<< file has been converted succesfully');
+          // done(null, {});
+          // return;
 
-              const record = await db.saveFileInfo({
-                id: getFilenameAndExtension(fileId).filename,
-                originalName: originalFilename,
-                type,
-                hashedName: fileId,
-                thumbnail: thumbnail
-              });
+          // console.log(readStream);
 
-              done(null, record);
-            })
-            .on('progress', (progress) => {
-              console.log({ progress });
-              // console.log('Processing: ' + progress.percent + '% done');
-            })
-            .on('error', (err, stdout, stderr) => {
-              console.log('an error happened: ' + err.message);
-              console.log('ffmpeg stdout: ' + stdout);
-              console.log('ffmpeg stderr: ' + stderr);
+          //https://www.reddit.com/r/ffmpeg/comments/u1qlsm/mp4_to_webm_help/
+          //ffmpeg -i infile.mp4 -c:v libsvtav1 -preset 4 -crf 30 -g 240 -pix_fmt yuv420p10le -svtav1-params tune=0:film-grain=8 -c:a -b:a 128k libopus outfile.webm
 
-              done(null, result);
-            })
-            .on('start', () => {
-              console.log('>>>> file starting');
+          const ffmpegGlobalParams = '-hide_banner -loglevel debug -y';
+          const ffmpegInputParams = ' -i pipe:0 -ss 0';
+          // const ffmpegOutputParams =
+          //   ' -t 3 -filter:v scale=640:-1 -c:v libvpx -crf 15 -b:v 1M -c:a libvorbis -f webm -y out.webm';
+          // const ffmpegOutputParams =
+          //   ' -pix_fmt yuv420p -t 3 -filter:v scale=640:-1 -c:v libvpx-vp9 -crf 15 -b:v 1M -deadline realtime -c:a libvorbis -q:a 10 -f webm out.webm';
+          const ffmpegOutputParams =
+            ' -t 3 -filter:v scale=640:-1 -c:v libsvtav1 -preset 4 -crf 30 -g 240 -pix_fmt yuv420p10le -c:a libopus outfile.webm';
+
+          const params = (ffmpegGlobalParams + ffmpegInputParams + ffmpegOutputParams).split(' ');
+
+          try {
+            const ffmpegCmd = spawn('ffmpeg', params);
+
+            readStream.pipe(ffmpegCmd.stdin);
+            // ffmpegCmd.stdout.pipe(writeStream);
+
+            ffmpegCmd.stderr.on('data', function (data) {
+              console.log(data.toString());
             });
 
-          const pipeline = transform.pipe(writeStream, { end: true });
+            ffmpegCmd.stderr.on('end', function () {
+              console.log('file has been converted succesfully');
+            });
 
-          pipeline.on('close', () => {
-            readStream.destroy();
-            console.log('upload successful');
-          });
+            ffmpegCmd.stderr.on('exit', function () {
+              console.log('child process exited');
+            });
+
+            ffmpegCmd.on('close', function () {
+              console.log('...closing time! bye');
+            });
+          } catch (e) {
+            console.log('Gotcha!', e);
+          }
+
+          // ffmpegCmd.stdout.on('data', (data) => {
+          //   console.log(`stdout: ${data}`);
+          // });
+
+          // ffmpegCmd.stderr.on('data', (data: any) => {
+          //   console.log(`stderr: ${data}`);
+          // });
+
+          // ffmpegCmd.on('error', (error) => {
+          //   console.log(`error: ${error.message}`);
+          // });
+
+          // ffmpegCmd.on('close', (code) => {
+          //   console.log(`child process exited with code ${code}`);
+          // });
+
+          if (false) {
+            console.log('fluent-ffmpeg');
+
+            const transform = ffmpeg(readStream)
+              .duration('0:3')
+              .videoCodec('libvpx')
+              .audioCodec('libvorbis')
+              .outputOptions(
+                '-threads',
+                '1', //Use number of real cores available on the computer - 1
+                '-flags',
+                '+global_header', //WebM won't love if you if you don't give it some headers
+                '-psnr'
+              ) //Show PSNR measurements in output. Anything above 40dB indicates excellent fidelity
+              .videoBitrate(1000, true)
+              .outputFormat('webm')
+              .on('end', async () => {
+                console.log('<<<<< file has been converted succesfully');
+
+                const record = await db.saveFileInfo({
+                  id: getFilenameAndExtension(fileId).filename,
+                  originalName: originalFilename,
+                  type,
+                  hashedName: fileId,
+                  thumbnail: thumbnail
+                });
+
+                done(null, record);
+              })
+              .on('progress', (progress) => {
+                console.log({ progress });
+                // console.log('Processing: ' + progress.percent + '% done');
+              })
+              .on('error', (err, stdout, stderr) => {
+                console.log('an error happened: ' + err.message);
+                console.log('ffmpeg stdout: ' + stdout);
+                console.log('ffmpeg stderr: ' + stderr);
+
+                done(null, result);
+              })
+              .on('start', () => {
+                console.log('>>>> file starting');
+              });
+
+            const pipeline = transform.pipe(writeStream, { end: true });
+
+            pipeline.on('close', () => {
+              readStream.destroy();
+              console.log('upload successful');
+            });
+          }
         }
         break;
     }
@@ -225,3 +278,27 @@ process.env.NODE_ENV === 'production'
     });
 
 // start(1);
+
+// .inputOption('-pix_fmt yuv420p')
+// .duration('0:3')
+// .videoCodec('libx265')
+// .audioCodec('aac')
+// .outputFormat('webm')
+// .input('./assets/watermark.png')
+// .complexFilter(['[0:v]scale=640:-1[bg];[bg][1:v]overlay=W-w-10:H-h-10'])
+// .addOutputOptions('-movflags +frag_keyframe+separate_moof+omit_tfhd_offset+empty_moov')
+// .outputOptions(['-movflags frag_keyframe+empty_moov'])
+// .videoCodec('libvpx') //libvpx-vp9 could be used too
+// .audioCodec('aac')
+// .videoBitrate(1000, true) //Outputting a constrained 1Mbit VP8 video stream
+// .outputOptions(
+//   '-minrate',
+//   '1000',
+//   '-maxrate',
+//   '1000',
+//   '-threads',
+//   '1', //Use number of real cores available on the computer - 1
+//   '-flags',
+//   '+global_header', //WebM won't love if you if you don't give it some headers
+//   '-psnr'
+// ) //Show PSNR measurements in output. Anything above 40dB indicates excellent fidelity

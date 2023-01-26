@@ -39,7 +39,7 @@ export class GalleryService {
       //     limit: 10,
       //   },
       // },
-      // Repeat payment job once every day at 3:15 (am)
+      // Repeat payment job once every day at 8:45 (am)
       { repeat: { cron: '45 8 * * *' } },
     );
   }
